@@ -3,8 +3,8 @@ from google import genai
 
 # 1. SAYFA AYARLARI
 st.set_page_config(page_title="Herkes İçin Yapay Zeka", page_icon="🤖", layout="centered")
-st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
-st.write("Herkesin kullanabileceği, kota sınırı olmayan web tabanlı asistan.")
+st.title("🤖 Yapar Zeka Hizmetinizde")
+st.write("İsteyen istediği gibi kullanabilir.Ahmet İRİŞ tarafından tek başına yapılmıştır.")
 
 # 2. SENİN API ANAHTARIN
 API_KEY = 'AQ.Ab8RN6KO6vSky4NYi4hIdtyejM1qBmqvQzxe-6ZVV3HcfygsEA'
