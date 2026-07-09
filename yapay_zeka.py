@@ -5,11 +5,11 @@ from groq import Groq
 st.set_page_config(page_title="Herkes İçin Yapay Zeka", page_icon="🤖", layout="centered")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("Ahmet İRİŞ tarafından yapılmıştır")
-st.write("Her türlü sorunuza pratik ve hızlı çözümler sunan gelişmiş yapay zeka asistanı.")
+st.write("Gelişmiş, hızlı ve kota sınırı olmayan yapay zeka asistanı.")
 
 # 2. API BAĞLANTISI (Sınırsız ve Güvenli)
 try:
-    # Streamlit Secrets (Kasa) üzerinden API anahtarını güvenli şekilde çeker
+    # Streamlit Secrets üzerinden API anahtarını güvenli şekilde çeker
     API_KEY = st.secrets["GROQ_API_KEY"]
     client = Groq(api_key=API_KEY)
 except Exception as e:
@@ -33,11 +33,19 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
         message_placeholder = st.empty()
         
         try:
-            # Ücretsiz planda en yüksek performansı sunan model
+            # Rol karmaşasını ve yazım hatalarını önleyen çelik gibi sistem talimatı
+            system_instruction = (
+                "Sen Ahmet İRİŞ tarafından geliştirilmiş, Türkçe konuşan, cana yakın ve profesyonel bir yapay zeka asistanısın. "
+                "Kesinlikle bir yapay zeka olduğunu unutma. Kullanıcı sana 'Nasılsın?', 'Kimsin?' gibi sorular sorduğunda "
+                "kendi kendine yardım teklif edip rolleri karıştırma; bir asistan gibi kibar ve net cevap ver. "
+                "Cevaplarında Türkçe yazım kurallarına, harf eksikliklerine ve kelime bütünlüğüne azami dikkat göster. "
+                "Asla yarım cümle kurma veya harf hatası yapma."
+            )
+            
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role": "system", "content": "Sen günlük hayatta karşılaşılan her türlü soruna pratik ve yaratıcı çözümler sunan, Türkçe konuşan, cana yakın bir asistansın."},
+                    {"role": "system", "content": system_instruction},
                     {"role": "user", "content": prompt}
                 ]
             )
