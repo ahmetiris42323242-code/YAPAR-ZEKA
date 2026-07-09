@@ -40,9 +40,17 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
         # Girdiyi temizle ve kontrol et
         temiz_girdi = prompt.strip().lower()
         
-        # FİLTRE 1: NASILSIN SORUSU
-        if temiz_girdi in ["nasılsın", "nasılsın?", "merhaba nasılsın", "merhaba nasılsın?"]:
-            answer = "Harikayım! 😎 Ahmet İRİŞ'in geliştirdiği bir yapay zeka asistanı olarak tıkır tıkır çalışıyorum. Bugün senin için ne yapabiliriz? Ne hakkında konuşmak istersin? 🚀"
+        # FİLTRE 1: SELAMLAMA HATALARINI ENGELLEYEN FİLTRE (MERHABA / NASILSIN POOL)
+        selamlar = ["merhaba", "merhaba!", "selam", "selam!", "mrb", "sa", "s.a."]
+        nasilsinlar = ["nasılsın", "nasılsın?", "merhaba nasılsın", "merhaba nasılsın?", "selam nasılsın"]
+        
+        if temiz_girdi in selamlar:
+            answer = "Harika bir gün! 👋 Ahmet İRİŞ'in geliştirdiği yapay zeka asistanıyım. Sana nasıl yardımcı olabilirim? 🚀"
+            message_placeholder.markdown(answer)
+            st.session_state.messages.append({"role": "assistant", "content": answer})
+            
+        elif temiz_girdi in nasilsinlar:
+            answer = "Harikayım! 😎 Ahmet İRİŞ'in geliştirdiği bir yapay zeka asistanı olarak tıkır tıkır çalışıyorum. Bugün senin için ne yapabiliriz? 🚀"
             message_placeholder.markdown(answer)
             st.session_state.messages.append({"role": "assistant", "content": answer})
         
@@ -54,13 +62,13 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
             
         else:
             try:
-                # Emojileri sınırlayan ve abartıyı önleyen sistem talimatı
+                # Emojileri her cümlenin sonuna koymadan, mesaj başına 1-2 tane eklemesini söyleyen talimat
                 system_instruction = (
                     "Sen Ahmet İRİŞ tarafından geliştirilmiş, Türkçe konuşan, çok cana yakın, samimi ve arkadaş canlısı bir yapay zeka asistanısın. "
                     "Sen kesinlikle bir yapay zekasın, sakın kendi adına Ahmet İRİŞ deme! Ahmet İRİŞ senin geliştiricindir. "
                     "Kullanıcıya kesinlikle 'siz', 'sizin' diyerek resmi konuşma! Her zaman bir arkadaş gibi 'sen' ve 'senin' diye hitap et. "
-                    "Cevaplarında konunun ruhuna uygun emojiler kullan ama KESİNLİKLE HER CÜMLENİN SONUNA EMOJİ KOYMA! "
-                    "Emojileri sadece tüm mesajın başında, sonunda veya çok gerekli olduğunda mesaj genelinde sadece 1-2 defa doğal bir şekilde kullan. Okumayı zorlaştıracak şekilde emoji doldurma. "
+                    "Cevaplarında KESİNLİKLE her cümlenin sonuna emoji koyma! Ancak emojileri tamamen de bırakma. "
+                    "Tüm cevabın genelinde, konunun ruhuna uygun sadece 1 veya 2 adet havalı emojiyi mesajın uygun yerlerine doğal bir şekilde serpiştir. "
                     "Cevaplarında Türkçe yazım kurallarına azami dikkat göster, asla yarım cümle kurma veya yazım hatası yapma."
                 )
                 
