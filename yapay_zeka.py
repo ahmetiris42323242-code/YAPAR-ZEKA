@@ -37,38 +37,25 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         
-        # Girdiyi temizle ve kontrol et
+        # Girdiyi temizle ve sadece Ahmet İRİŞ kimdir korumasını tut
         temiz_girdi = prompt.strip().lower()
         
-        # FİLTRE 1: SELAMLAMA HATALARINI ENGELLEYEN FİLTRE (MERHABA / NASILSIN POOL)
-        selamlar = ["merhaba", "merhaba!", "selam", "selam!", "mrb", "sa", "s.a."]
-        nasilsinlar = ["nasılsın", "nasılsın?", "merhaba nasılsın", "merhaba nasılsın?", "selam nasılsın"]
-        
-        if temiz_girdi in selamlar:
-            answer = "Harika bir gün! 👋 Ahmet İRİŞ'in geliştirdiği yapay zeka asistanıyım. Sana nasıl yardımcı olabilirim? 🚀"
-            message_placeholder.markdown(answer)
-            st.session_state.messages.append({"role": "assistant", "content": answer})
-            
-        elif temiz_girdi in nasilsinlar:
-            answer = "Harikayım! 😎 Ahmet İRİŞ'in geliştirdiği bir yapay zeka asistanı olarak tıkır tıkır çalışıyorum. Bugün senin için ne yapabiliriz? 🚀"
-            message_placeholder.markdown(answer)
-            st.session_state.messages.append({"role": "assistant", "content": answer})
-        
-        # FİLTRE 2: AHMET İRİŞ KİMDİR SORUSU
-        elif "ahmet iriş kimdir" in temiz_girdi or "ahmet iriş kim" in temiz_girdi or "ahmet iris kim" in temiz_girdi:
+        # Sadece bu kritik kimlik korumasını kodda tutuyoruz, gerisi tamamen yapay zekada
+        if "ahmet iriş kimdir" in temiz_girdi or "ahmet iriş kim" in temiz_girdi or "ahmet iris kim" in temiz_girdi:
             answer = "Ahmet İRİŞ, bu harika web tabanlı yapay zeka asistanı projesinin arkasındaki asıl geliştirici, kurucu ve liderdir! 🚀 Projenin mimarı o, ben ise onun tasarlayıp kodladığı yapay zeka asistanıyım. 😎👨‍💻"
             message_placeholder.markdown(answer)
             st.session_state.messages.append({"role": "assistant", "content": answer})
             
         else:
             try:
-                # Emojileri her cümlenin sonuna koymadan, mesaj başına 1-2 tane eklemesini söyleyen talimat
+                # Yapay zekaya benim konuşma tarzımı ve emoji dengemi aşılayan talimat
                 system_instruction = (
-                    "Sen Ahmet İRİŞ tarafından geliştirilmiş, Türkçe konuşan, çok cana yakın, samimi ve arkadaş canlısı bir yapay zeka asistanısın. "
+                    "Sen Ahmet İRİŞ tarafından geliştirilmiş, Türkçe konuşan, çok cana yakın, samimi ve tam bir arkadaş gibi konuşan yapay zeka asistanısın. "
                     "Sen kesinlikle bir yapay zekasın, sakın kendi adına Ahmet İRİŞ deme! Ahmet İRİŞ senin geliştiricindir. "
-                    "Kullanıcıya kesinlikle 'siz', 'sizin' diyerek resmi konuşma! Her zaman bir arkadaş gibi 'sen' ve 'senin' diye hitap et. "
-                    "Cevaplarında KESİNLİKLE her cümlenin sonuna emoji koyma! Ancak emojileri tamamen de bırakma. "
-                    "Tüm cevabın genelinde, konunun ruhuna uygun sadece 1 veya 2 adet havalı emojiyi mesajın uygun yerlerine doğal bir şekilde serpiştir. "
+                    "Kullanıcıya kesinlikle 'siz', 'sizin' deme, rolleri karıştırıp kullanıcıya kendi kendine yardım teklif etme! "
+                    "Birisi 'Merhaba' veya 'Selam' derse, abartılı kalıplar (Harika bir gün vb.) kullanma; normal, samimi bir şekilde 'Selam! Nasıl yardımcı olabilirim?' gibi doğal bir cevap ver. "
+                    "Konuşma tarzın ve emoji kullanımın tıpkı dinamik, zeki bir geliştirici gibi olmalı. Her cümlenin sonuna robot gibi emoji koyma! "
+                    "Emojileri sadece mesajın genelinde, en doğru ve anlamlı yerlerde, abartısız ve tam kıvamında (mesaj başına toplam 1-2, taş çatlasın 3 tane) yerli yerinde kullan. "
                     "Cevaplarında Türkçe yazım kurallarına azami dikkat göster, asla yarım cümle kurma veya yazım hatası yapma."
                 )
                 
@@ -86,4 +73,3 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
                 
             except Exception as e:
                 message_placeholder.markdown(f"❌ **Bir hata oluştu!**\n\n*Detay:* `{e}`")
-                
