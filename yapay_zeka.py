@@ -7,9 +7,8 @@ st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("Ahmet İRİŞ tarafından yapılmıştır")
 st.write("Gelişmiş, hızlı ve kota sınırı olmayan yapay zeka asistanı.")
 
-# 2. API BAĞLANTISI (Sınırsız ve Güvenli)
+# 2. API BAĞLANTISI
 try:
-    # Streamlit Secrets üzerinden API anahtarını güvenli şekilde çeker
     API_KEY = st.secrets["GROQ_API_KEY"]
     client = Groq(api_key=API_KEY)
 except Exception as e:
@@ -32,28 +31,33 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         
-        try:
-            # Rol karmaşasını ve yazım hatalarını önleyen çelik gibi sistem talimatı
-            system_instruction = (
-                "Sen Ahmet İRİŞ tarafından geliştirilmiş, Türkçe konuşan, cana yakın ve profesyonel bir yapay zeka asistanısın. "
-                "Kesinlikle bir yapay zeka olduğunu unutma. Kullanıcı sana 'Nasılsın?', 'Kimsin?' gibi sorular sorduğunda "
-                "kendi kendine yardım teklif edip rolleri karıştırma; bir asistan gibi kibar ve net cevap ver. "
-                "Cevaplarında Türkçe yazım kurallarına, harf eksikliklerine ve kelime bütünlüğüne azami dikkat göster. "
-                "Asla yarım cümle kurma veya harf hatası yapma."
-            )
-            
-            completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            
-            answer = completion.choices[0].message.content
+        # 🛠️ KULLANICI "NASILSIN" DERSE YAPAY ZEKAYA HİÇ SORMADAN DİREKT CEVAP VER (FİLTRE)
+        temiz_girdi = prompt.strip().lower()
+        if temiz_girdi in ["nasılsın", "nasılsın?", "merhaba nasılsın", "merhaba nasılsın?"]:
+            answer = "Harikayım! Ahmet İRİŞ'in geliştirdiği bir yapay zeka asistanı olarak tıkır tıkır çalışıyorum. Bugün sana nasıl yardımcı olabilirim? 😎"
             message_placeholder.markdown(answer)
             st.session_state.messages.append({"role": "assistant", "content": answer})
-            
-        except Exception as e:
-            message_placeholder.markdown(f"❌ **Bir hata oluştu!**\n\n*Detay:* `{e}`")
-            
+        
+        else:
+            try:
+                system_instruction = (
+                    "Sen Ahmet İRİŞ tarafından geliştirilmiş, Türkçe konuşan, cana yakın ve profesyonel bir yapay zeka asistanısın. "
+                    "Görevin, sana soru soran kullanıcılara yardımcı olmaktır. Kesinlikle bir yapay zeka olduğunu unutma. "
+                    "Cevaplarında Türkçe yazım kurallarına azami dikkat göster, asla yarım cümle kurma veya yazım hatası yapma."
+                )
+                
+                completion = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                
+                answer = completion.choices[0].message.content
+                message_placeholder.markdown(answer)
+                st.session_state.messages.append({"role": "assistant", "content": answer})
+                
+            except Exception as e:
+                message_placeholder.markdown(f"❌ **Bir hata oluştu!**\n\n*Detay:* `{e}`")
+                
