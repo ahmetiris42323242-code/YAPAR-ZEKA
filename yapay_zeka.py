@@ -7,7 +7,7 @@ st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.write("Arka planda hiçbir program çalıştırmanıza gerek olmayan, herkesin kullanabileceği asistan.")
 
 # Google API Bağlantısı (API anahtarını buraya tırnak içine yaz)
-client = genai.Client(api_key='AQ.Ab8RN6JLo8alRPmOxz3N_yp5BWzllmC1fBDCEUUnHJVS_dafaw')
+client = genai.Client(api_key='AQ.Ab8RN6L9W0nxcA5T-MwSwQBEHqSA0YcMGJBfc76OgYtytrDeOA')
 
 # 2. SOHBET GEÇMİŞİNİ HAFIZADA TUTMA
 if "messages" not in st.session_state:
