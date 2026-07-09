@@ -9,7 +9,7 @@ st.write("Gelişmiş, kotasız ve tamamen akıllı yapay zeka asistanı.")
 
 # 2. GEMINI API BAĞLANTISI
 try:
-    API_KEY = st.secrets["GEMINI_API_KEY"]
+    API_KEY = st.secrets["AQ.Ab8RN6KJdtj4ks9AcuaJWC9-f2VLfwnUzAokq4hw6TDqeApniQ"]
     genai.configure(api_key=API_KEY)
 except Exception as e:
     st.error(f"Yapay zeka motoru başlatılamadı. Secrets ayarlarını kontrol edin. Hata: {e}")
