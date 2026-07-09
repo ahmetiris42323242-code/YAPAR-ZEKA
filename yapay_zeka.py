@@ -5,9 +5,9 @@ from groq import Groq
 st.set_page_config(page_title="Herkes İçin Yapay Zeka", page_icon="🤖", layout="centered")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("Ahmet İRİŞ tarafından yapılmıştır")
-st.write("Groq altyapısıyla güçlendirilmiş, kota sınırı olmayan ultra hızlı asistan.")
+st.write("Her türlü sorunuza pratik ve hızlı çözümler sunan gelişmiş yapay zeka asistanı.")
 
-# 2. GROQ API BAĞLANTISI (Sınırsız ve Güvenli)
+# 2. API BAĞLANTISI (Sınırsız ve Güvenli)
 try:
     # Streamlit Secrets (Kasa) üzerinden API anahtarını güvenli şekilde çeker
     API_KEY = st.secrets["GROQ_API_KEY"]
@@ -33,7 +33,7 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
         message_placeholder = st.empty()
         
         try:
-            # Ücretsiz planda en yüksek kotayı sunan ve ışık hızında çalışan model
+            # Ücretsiz planda en yüksek performansı sunan model
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
@@ -48,4 +48,4 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
             
         except Exception as e:
             message_placeholder.markdown(f"❌ **Bir hata oluştu!**\n\n*Detay:* `{e}`")
-    
+            
