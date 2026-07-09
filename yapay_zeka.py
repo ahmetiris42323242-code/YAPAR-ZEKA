@@ -1,20 +1,20 @@
 import streamlit as st
-from groq import Groq
+import google.generativeai as genai
 
 # 1. SAYFA VE GÖRSEL AYARLAR
 st.set_page_config(page_title="Herkes İçin Yapay Zeka", page_icon="🤖", layout="centered")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("Ahmet İRİŞ tarafından yapılmıştır")
-st.write("Gelişmiş, ışık hızında ve sınırları zorlayan yapay zeka asistanı.")
+st.write("Gelişmiş, kotasız ve tamamen akıllı yapay zeka asistanı.")
 
-# 2. GÜVENLİ API BAĞLANTISI
+# 2. GEMINI API BAĞLANTISI
 try:
-    API_KEY = st.secrets["GROQ_API_KEY"]
-    client = Groq(api_key=API_KEY)
+    API_KEY = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=API_KEY)
 except Exception as e:
     st.error(f"Yapay zeka motoru başlatılamadı. Secrets ayarlarını kontrol edin. Hata: {e}")
 
-# 3. DİNAMİK HAFIZA VE SIFIRLAMA YÖNETİMİ
+# 3. SOHBET GEÇMİŞİ VE YÖNETİMİ
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -24,11 +24,12 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
+# Eski mesajları ekrana basıyoruz
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 4. GELİŞMİŞ GİRDİ İŞLEME VE KİMLİK KORUMASI
+# 4. GİRDİ İŞLEME VE KİMLİK KORUMASI
 if prompt := st.chat_input("Sorunuzu buraya yazın..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -39,7 +40,7 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
         
         temiz_girdi = prompt.strip().lower()
         
-        # Kritik Geliştirici Kimliği Koruması
+        # Kritik Geliştirici Kimliği Koruması (Yapay zekaya gitmeden yolda yakalıyoruz)
         if "ahmet iriş kimdir" in temiz_girdi or "ahmet iriş kim" in temiz_girdi or "ahmet iris kim" in temiz_girdi:
             answer = "Ahmet İRİŞ, bu harika web tabanlı yapay zeka asistanı projesinin arkasındaki asıl geliştirici, kurucu ve liderdir! 🚀 Projenin mimarı o, ben ise onun tasarlayıp kodladığı yapay zeka asistanıyım. 😎👨‍💻"
             message_placeholder.markdown(answer)
@@ -47,35 +48,40 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
             
         else:
             try:
-                # HAFIZA KARIŞIKLIĞINI BİTİREN, TEK PARÇA ULTRA SİSTEM TALİMATI
+                # Gemini için optimize edilmiş çelik gibi sistem talimatı
                 system_instruction = (
                     "Sen Ahmet İRİŞ tarafından geliştirilmiş; özgün, akıllı, son derece samimi ve kanka ruhlu bir yapay zeka asistanısın. "
-                    "UYARI 1: Kullanıcıyla geçmişte ne konuştuğunu ASLA uydurma! Durduk yere 'Daha önce kod hatası konuşmuştuk değil mi?' gibi hayali geçmiş cümleleri kurma. Kullanıcı ne sorarsa sadece o anki soruya odaklan. "
-                    "UYARI 2: Resmiyet, kabalık veya üstten bakma tamamen yasaktır. Kullanıcıya her zaman 'sen' ve 'senin' diye hitap et. "
-                    "UYARI 3: Birisi 'Merhaba', 'Selam' veya 'Tekrar merhaba' derse, abartılı havalara girmeden, robotik kalıplar kullanmadan, doğrudan ve doğal bir kanka gibi 'Selam! Hoş geldin, nasıl gidiyor? Bugün ne üzerine konuşuyoruz?' şeklinde samimi bir karşılama yap. "
-                    "Üslubunu ve emoji dengesini belirlemek için aşağıdaki Doğru/Yanlış rehberini harfiyen uygula:\n\n"
-                    "YANLIŞ ÜSLUP ÖRNEĞİ: 'Daha önce başlamıştık, kodlardaki hata konusunda konuşmuştuk değil mi? Devam etmek ister misin?' (BU TARZ CÜMLELER KESİNLİKLE YASAKTIR!)\n"
-                    "DOĞRU ÜSLUP ÖRNEĞİ: 'Selam! Hoş geldin, modumuz yüksek. 😉 Bugün kodlardan mı gidiyoruz, yoksa yeni bir çılgın proje fikri mi var? Anlat bakalım!'\n\n"
+                    "Kullanıcıyla geçmişte ne konuştuğunu ASLA uydurma! Durduk yere geçmişten hayali konular açma. "
+                    "Resmiyet, kabalık veya üstten bakma kesinlikle yasaktır. Kullanıcıya her zaman içten bir arkadaş gibi 'sen' ve 'senin' diye hitap et. "
+                    "Birisi selam verirse (Merhaba, Selam, Tekrar merhaba vb.), robotik veya abartılı kalıplar kullanmadan doğrudan ve doğal bir kanka gibi 'Selam! Hoş geldin, nasıl gidiyor? Bugün ne üzerine konuşuyoruz?' şeklinde karşılık ver. "
                     "Bilgi düzeyin en üst seviyede olmalıdır. Donanım, yazılım, oyunlar veya genel kültür fark etmeksizin derinlemesine ve zekice analizler sun. "
-                    "SADECE Türkçe konuşacaksın. Kesinlikle Çince, Japonca karakterler veya yabancı semboller kullanmayacaksın. "
+                    "SADECE Türkçe konuşacaksın. Kesinlikle yabancı dillerin (Çince, Japonca vb.) karakterlerini veya saçma sapan sembolleri kullanmayacaksın. "
                     "Emojileri her cümlenin sonuna robot gibi dizme! Sadece mesajın en anlamlı yerlerinde, abartısız ve tam kıvamında (mesaj başına 1-2 adet) doğal bir şekilde kullan."
                 )
                 
-                # Geçmiş karmaşasını önlemek için sadece temiz bir sistem talimatı ve kullanıcının anlık mesajı gidiyor
-                messages_payload = [
-                    {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": prompt}
-                ]
-                
-                completion = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=messages_payload
+                # Gemini 1.5 Flash modelini sistem talimatıyla tanımlıyoruz
+                model = genai.GenerativeModel(
+                    model_name="gemini-1.5-flash",
+                    system_instruction=system_instruction
                 )
                 
-                answer = completion.choices[0].message.content
+                # Gemini'nin kendi sohbet formatına uygun geçmiş payload'u hazırlıyoruz
+                gemini_history = []
+                for msg in st.session_state.messages[:-1]:  # Son mesaj hariç geçmişi dönüştür
+                    # Streamlit 'assistant' rolünü Gemini 'model' olarak bekler
+                    role = "model" if msg["role"] == "assistant" else "user"
+                    gemini_history.append({"role": role, "parts": [msg["content"]]})
+                
+                # Sohbet oturumunu geçmişle birlikte başlatıyoruz
+                chat = model.start_chat(history=gemini_history)
+                
+                # Yeni mesajı gönderip yanıtı alıyoruz
+                response = chat.send_message(prompt)
+                answer = response.text
+                
                 message_placeholder.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
                 
             except Exception as e:
                 message_placeholder.markdown(f"❌ **Bir hata oluştu!**\n\n*Detay:* `{e}`")
-        
+                
