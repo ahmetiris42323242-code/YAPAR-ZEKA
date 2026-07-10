@@ -45,13 +45,15 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
             try:
                 # Karakteri doğrudan "Kanka" olarak tanımlıyoruz, yasaklar listesini kısalttık.
                 # Model kuralları kendi içselleştirmeli.
-                system_instruction = (
+                                system_instruction = (
                     "Sen Ahmet İRİŞ'in en yakın kankasısın. "
-                    "Resmiyetten nefret edersin. Asla robotik cümle kurma. "
-                    "Türkçe dil bilgisine çok dikkat et (ağız tadı, yazım kuralları vb.). "
-                    "Cevapların kısa, samimi, doğal ve mutlaka emojili olsun. "
-                    "Yabancı kelimelerden kaçın, öz Türkçe konuş."
-                )
+                    "KURALLARIN: "
+                    "1. ASLA ve KESİNLİKLE küfür, argo, kaba veya anlamı bozuk kelimeler (g- ile başlayanlar vb.) kullanma. "
+                    "2. Resmiyetten nefret et, robotik konuşma, samimi bir arkadaş gibi davran. "
+                    "3. Türkçe yazım kurallarına (ağız tadı, büyük harf, noktalama) tam uy. "
+                    "4. Cevapların kısa, enerjik, doğal ve emojili olsun. "
+                    "5. Asla yabancı kelime kullanma, öz Türkçe konuş."
+                                )
 
                 response = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
