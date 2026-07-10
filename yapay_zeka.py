@@ -28,7 +28,7 @@ for message in st.session_state.messages:
 # --- 4. KULLANICI GİRDİSİ VE YANIT ---
 if prompt := st.chat_input("Bir şeyler yaz kanka..."):
     
-    # Kullanıcı mesajını ekle ve ekranyaz
+    # Kullanıcı mesajını ekle ve ekrana yaz
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -54,13 +54,13 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
                 "Content-Type": "application/json"
             }
 
-            # openrouter/free sistemi otomatik olarak en stabil ücretsiz modeli seçer
+            # Tamamen Google altyapısı, Meta kesinlikle yok! çok hızlı ve ücretsiz.
             data = {
-                "model": "openrouter/free",
+                "model": "google/gemma-2-9b-it:free",
                 "messages": messages_to_send
             }
 
-            # İsteği gönder (stream=False ile temiz metin alınır)
+            # İsteği gönder
             response = requests.post(URL, headers=headers, data=json.dumps(data))
             response_json = response.json()
 
@@ -71,7 +71,6 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
                 # Hafızaya ekle
                 st.session_state.messages.append({"role": "assistant", "content": cevap})
             else:
-                # OpenRouter hata döndüyse detayını ekrana bas ki anlayalım
                 hata_mesaji = response_json.get("error", {}).get("message", "Bilinmeyen bir hata oluştu.")
                 st.error(f"Sistem Hatası: {hata_mesaji}")
                 
