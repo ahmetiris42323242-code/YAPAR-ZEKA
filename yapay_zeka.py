@@ -14,7 +14,8 @@ if "GEMINI_API_KEY" not in st.secrets:
     st.stop()
 
 API_KEY = st.secrets["GEMINI_API_KEY"]
-URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
+# Akıcı veri için 'streamGenerateContent' endpoint'ini kullanıyoruz
+URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key={API_KEY}"
 
 # --- 3. SOHBET GEÇMİŞİ (HAFIZA) ---
 if "messages" not in st.session_state:
@@ -36,14 +37,12 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
     # Yapay zeka yanıt penceresi
     with st.chat_message("assistant"):
         try:
-            # Karakter talimatı
             system_instruction = (
                 "Sen Ahmet İRİŞ'in en yakın kankasısın. Sadece Türkçe konuş. "
                 "Cevapların çok kısa, samimi ve net olsun. Mutlaka emoji kullan. "
                 "Asla soru sorma. Fiziksel bir bedenin varmış gibi uydurma."
             )
             
-            # Google Gemini formatına göre geçmişi hazırla
             contents = []
             for msg in st.session_state.messages:
                 role = "model" if msg["role"] == "assistant" else "user"
@@ -52,7 +51,6 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
                     "parts": [{"text": msg["content"]}]
                 })
 
-            # API veri yapısı
             data = {
                 "contents": contents,
                 "systemInstruction": {
@@ -62,18 +60,40 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
 
             headers = {"Content-Type": "application/json"}
 
-            # İsteği gönder
-            response = requests.post(URL, headers=headers, data=json.dumps(data))
-            response_json = response.json()
+            # İsteği stream=True olarak gönderiyoruz, veri anlık akacak
+            response = requests.post(URL, headers=headers, data=json.dumps(data), stream=True)
+            
+            # Streamlit'in anlık yazı yazdırma kutusunu oluşturuyoruz
+            cevap_kutusu = st.empty()
+            tam_cevap = ""
 
-            # Yanıtı kontrol et ve ekrana bas
-            if "candidates" in response_json and len(response_json["candidates"]) > 0:
-                cevap = response_json["candidates"][0]["content"]["parts"][0]["text"]
-                st.markdown(cevap)
-                # Hafızaya ekle
-                st.session_state.messages.append({"role": "assistant", "content": cevap})
+            # Gelen veriyi satır satır oku ve anında ekrana bas
+            for line in response.iter_lines():
+                if line:
+                    decoded_line = line.decode('utf-8').strip()
+                    # Google API'sinin stream formatını temizleme
+                    if decoded_line.startswith('"text":'):
+                        try:
+                            # Kelimeyi ayıkla
+                            kelime = decoded_line.split('"text":')[1].strip().strip('"').replace('\\n', '\n')
+                            tam_cevap += kelime
+                            # Anlık olarak ekrandaki yazıyı güncelle
+                            cevap_kutusu.markdown(tam_cevap)
+                        except:
+                            continue
+            
+            # Eğer boş kalmadıysa hafızaya ekle
+            if tam_cevap:
+                st.session_state.messages.append({"role": "assistant", "content": tam_cevap})
             else:
-                st.error("Yanıt alınamadı. Lütfen tekrar dene kanka.")
+                # Yedek kontrol (Eğer stream formatı çözülemezse düz metin olarak bas)
+                try:
+                    res_json = response.json()
+                    cevap = res_json[0]["candidates"][0]["content"]["parts"][0]["text"]
+                    cevap_kutusu.markdown(cevap)
+                    st.session_state.messages.append({"role": "assistant", "content": cevap})
+                except:
+                    st.error("Bir sorun oluştu kanka, tekrar yazar mısın?")
                 
         except Exception as e:
             st.error(f"Bağlantı Hatası: {e}")
