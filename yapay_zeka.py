@@ -20,15 +20,20 @@ except:
 URL = "https://router.flatkey.ai/v1/chat/completions"
 headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
+# --- DOSYA YÜKLEME ---
+uploaded_file = st.sidebar.file_uploader("Bir dosya yükle (TXT, MD)", type=['txt', 'md'])
+file_content = ""
+if uploaded_file:
+    file_content = uploaded_file.read().decode("utf-8")
+    st.sidebar.success("Dosya başarıyla yüklendi!")
+
 # --- SOHBET ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Mesajları ve ses butonlarını gösterme
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
-        # Asistan cevaplarına ses butonu ekle
         if message["role"] == "assistant":
             if st.button("🔊 Sesli Oku", key=f"audio_{i}"):
                 tts = gTTS(text=message["content"], lang='tr')
@@ -36,36 +41,25 @@ for i, message in enumerate(st.session_state.messages):
                 st.audio(f"cevap_{i}.mp3")
 
 if prompt := st.chat_input("Mesajını yaz..."):
+    # Dosya içeriğini prompt'a ekle
+    context_prompt = f"{prompt}\n\n[YÜKLENEN DOSYA İÇERİĞİ]: {file_content}" if file_content else prompt
+    
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # 1. HIZLI ARAMA
-        search_instruction = ""
-        keywords = ["ara", "güncel", "yeni", "modlar", "liste", "neler oldu", "tarih"]
-        
-        if any(word in prompt.lower() for word in keywords):
-            with st.spinner("2026 verileri taranıyor..."):
-                try:
-                    results = DDGS().text(f"{prompt} 2026", max_results=3)
-                    search_summary = "\n".join([f"- {r['body']}" for r in results])
-                    search_instruction = f"\n\n[GÜNCEL VERİLER]: {search_summary}"
-                except:
-                    pass
-
-        # 2. KİMLİK VE KURALLAR
-        current_date = datetime.now().strftime("%d %B %Y")
+        # ARAMA VE KURALLAR
         system_instructions = (
-            f"Sen Ahmet İRİŞ tarafından tasarlanmış bir asistanısın. Bugünün tarihi: {current_date}. "
-            "Asla 2023 yılında olduğunu iddia etme, 2026 yılındasın. "
+            f"Sen Ahmet İRİŞ tarafından tasarlanmış bir asistansın. Bugünün tarihi: {datetime.now().strftime('%d %B %Y')}. "
+            "Sana bir dosya içeriği verilirse, bu dosyayı analiz et ve özetle. "
             "Eğer 'Çağın'ı tanıyor musun?' diye sorulursa: 'O sırada Çağın aga, ben ne alaka ya ha ha ha!' de. "
             "Eğer 'Abdurami'yi tanıyor musun?' diye sorulursa: 'Aponuza boydan gireyim böhöhöhöyt!' de."
         )
 
         messages = [{"role": "system", "content": system_instructions}]
         messages.extend(st.session_state.messages[:-1]) 
-        messages.append({"role": "user", "content": prompt + search_instruction})
+        messages.append({"role": "user", "content": context_prompt})
             
         try:
             response = requests.post(URL, headers=headers, json={"model": "gpt-4o", "messages": messages})
@@ -73,10 +67,9 @@ if prompt := st.chat_input("Mesajını yaz..."):
                 answer = response.json()['choices'][0]['message']['content']
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
-                # Sayfayı yeniden yükle ki yeni eklenen buton görünsün
                 st.rerun()
             else:
                 st.error("API Bağlantı Hatası!")
         except Exception as e:
             st.error(f"Hata: {e}")
-            
+    
