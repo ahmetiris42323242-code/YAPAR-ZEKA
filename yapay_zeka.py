@@ -14,7 +14,8 @@ except:
     st.error("API Anahtarı bulunamadı!")
     st.stop()
 
-# 2026 güncel uç noktası
+# 2026 Güncel URL Yapısı
+# 'models/gemini-1.5-flash' şeklinde kullanıyoruz
 MODEL = "gemini-1.5-flash"
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={API_KEY}"
 
@@ -31,27 +32,19 @@ if prompt := st.chat_input("Bir mesaj yaz..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # Mesaj geçmişini hazırlayalım
-        history = []
-        for m in st.session_state.messages:
-            role = "user" if m["role"] == "user" else "model"
-            history.append({"role": role, "parts": [{"text": m["content"]}]})
-            
+        history = [{"role": "user" if m["role"] == "user" else "model", "parts": [{"text": m["content"]}]} for m in st.session_state.messages]
         payload = {"contents": history}
         
         try:
-            # POST isteği
-            response = requests.post(URL, json=payload)
+            response = requests.post(URL, headers={'Content-Type': 'application/json'}, json=payload)
             
             if response.status_code == 200:
-                result = response.json()
-                answer = result['candidates'][0]['content']['parts'][0]['text']
+                answer = response.json()['candidates'][0]['content']['parts'][0]['text']
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
-                # 404 veya başka bir hata gelirse burada tam olarak ne yazdığını göreceğiz
                 st.error(f"Hata Kodu: {response.status_code}")
-                st.write(f"Detay: {response.text}")
+                st.code(response.text) # Hata detayını kod bloğunda göster
                 
         except Exception as e:
             st.error(f"Sistem Hatası: {e}")
