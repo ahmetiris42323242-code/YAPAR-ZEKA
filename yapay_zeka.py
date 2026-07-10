@@ -1,30 +1,18 @@
 import streamlit as st
 import requests
 import json
-import os  # Platform fark etmeksizin şifreyi okuyabilmek için ekledik
+import os  # Render ortam değişkenini okumak için
 
 # --- 1. ARAYÜZ VE BAŞLIK ---
 st.set_page_config(page_title="Web Tabanlı Yapay Zeka", page_icon="🤖")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("By Ahmet İRİŞ (Dakika da 15 Soru Hakkı)")
-st.write("🌐 **API Sunucu Adresi:** generativelanguage.googleapis.com")
 st.markdown("---")
 
-# --- 2. API KONTROLÜ (RENDER VE HER YER İÇİN EN TEMİZ SÜRÜM) ---
-API_KEY = None
+# --- 2. API KONTROLÜ (SADECE RENDER ORTAM DEĞİŞKENİ) ---
+API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# Önce Render ortam değişkenlerine bakıyoruz
-if "GEMINI_API_KEY" in os.environ:
-    API_KEY = os.environ["GEMINI_API_KEY"]
-else:
-    # Eğer localde veya başka yerde st.secrets varsa oradan dene, yoksa hata verme
-    try:
-        if "GEMINI_API_KEY" in st.secrets:
-            API_KEY = st.secrets["GEMINI_API_KEY"]
-    except:
-        pass
-
-# Eğer hiçbir yerde bulamazsa durdur
+# Eğer Render panelinde şifre eklenmediyse uyarı ver
 if not API_KEY:
     st.error("🚨 API Anahtarı eksik! Lütfen Render panelinden Environment Variables kısmına GEMINI_API_KEY ekleyin.")
     st.stop()
