@@ -1,9 +1,13 @@
 import streamlit as st
 from groq import Groq
 
-# 1. Sayfa Ayarları
-st.set_page_config(page_title="Ahmet İRİŞ - Kanka Asistan", page_icon="😎")
-st.title("🤖 Kanka Modu")
+# 1. Sayfa Ayarları (SEO ve Arayüz)
+st.set_page_config(page_title="Web Tabanlı Yapay Zeka", page_icon="🤖", layout="centered")
+
+# Başlık ve İmza Kısmı
+st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
+st.caption("Ahmet İRİŞ tarafından yapılmıştır")
+st.markdown("---")
 
 # 2. API Bağlantısı (Secrets'tan)
 if "GROQ_API_KEY" in st.secrets:
@@ -22,14 +26,13 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # 5. Girdi İşleme
-if prompt := st.chat_input("Naber kanka?"):
+if prompt := st.chat_input("Sorunuzu buraya yazın..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
         try:
-            # Temel talimat
             system_prompt = (
                 "Sen Ahmet İRİŞ'in en yakın kankasısın. "
                 "Cevapların kısa, samimi, Türkçe ve mutlaka emojili olsun. "
