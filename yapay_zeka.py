@@ -9,12 +9,13 @@ st.caption("Ahmet İRİŞ tarafından yapılmıştır")
 st.markdown("---")
 
 # --- 2. API KONTROLÜ ---
-if "OPENROUTER_API_KEY" not in st.secrets:
-    st.error("🚨 API Anahtarı eksik! Lütfen Streamlit Secrets paneline OPENROUTER_API_KEY ekleyin.")
+if "HF_TOKEN" not in st.secrets:
+    st.error("🚨 API Anahtarı eksik! Lütfen Streamlit Secrets paneline HF_TOKEN ekleyin.")
     st.stop()
 
-API_KEY = st.secrets["OPENROUTER_API_KEY"]
-URL = "https://openrouter.ai/api/v1/chat/completions"
+API_KEY = st.secrets["HF_TOKEN"]
+# Hugging Face üzerinden Qwen 2.5 modelini çağırıyoruz (Meta değil, tamamen ücretsiz ve stabil)
+URL = "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-7B-Instruct/v1/chat/completions"
 
 # --- 3. SOHBET GEÇMİŞİ (HAFIZA) ---
 if "messages" not in st.session_state:
@@ -54,10 +55,10 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
                 "Content-Type": "application/json"
             }
 
-            # Tamamen Google altyapısı, Meta kesinlikle yok! çok hızlı ve ücretsiz.
             data = {
-                "model": "deepseek/deepseek-chat:free",
-                "messages": messages_to_send
+                "model": "Qwen/Qwen2.5-7B-Instruct",
+                "messages": messages_to_send,
+                "max_tokens": 150
             }
 
             # İsteği gönder
@@ -71,8 +72,7 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
                 # Hafızaya ekle
                 st.session_state.messages.append({"role": "assistant", "content": cevap})
             else:
-                hata_mesaji = response_json.get("error", {}).get("message", "Bilinmeyen bir hata oluştu.")
-                st.error(f"Sistem Hatası: {hata_mesaji}")
+                st.error("Hugging Face sunucusu şu an uyanıyor olabilir, lütfen birkaç saniye sonra tekrar dene.")
                 
         except Exception as e:
             st.error(f"Bağlantı Hatası: {e}")
