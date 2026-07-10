@@ -1,19 +1,29 @@
 import streamlit as st
 import requests
 import json
+import os  # Platform fark etmeksizin şifreyi okuyabilmek için ekledik
 
 # --- 1. ARAYÜZ VE BAŞLIK ---
 st.set_page_config(page_title="Web Tabanlı Yapay Zeka", page_icon="🤖")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
-st.caption("By Ahmet İRİŞ (Dakika 15 Soru Hakkı)")
+st.caption("By Ahmet İRİŞ (Dakika da 15 Soru Hakkı)")
+st.write("🌐 **API Sunucu Adresi:** generativelanguage.googleapis.com")
 st.markdown("---")
 
-# --- 2. API KONTROLÜ ---
-if "GEMINI_API_KEY" not in st.secrets:
-    st.error("🚨 API Anahtarı eksik! Lütfen Streamlit Secrets paneline GEMINI_API_KEY ekleyin.")
+# --- 2. API KONTROLÜ (GÜÇLENDİRİLMİŞ SÜRÜM) ---
+API_KEY = None
+
+# Önce Render ortam değişkenlerine bak, yoksa Streamlit secrets dene
+if "GEMINI_API_KEY" in os.environ:
+    API_KEY = os.environ["GEMINI_API_KEY"]
+elif "GEMINI_API_KEY" in st.secrets:
+    API_KEY = st.secrets["GEMINI_API_KEY"]
+
+# Eğer ikisinde de bulamazsa hata ver ve durdur
+if not API_KEY:
+    st.error("🚨 API Anahtarı eksik! Lütfen Render panelinden Environment Variables kısmına GEMINI_API_KEY ekleyin.")
     st.stop()
 
-API_KEY = st.secrets["GEMINI_API_KEY"]
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key={API_KEY}"
 
 # --- 3. SOHBET GEÇMİŞİ (HAFIZA) ---
@@ -39,7 +49,7 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
             system_instruction = (
                 "Sen Ahmet İRİŞ'in en yakın kankası, can dostusun. Sadece Türkçe konuş. "
                 "Cevapların asla tek kelime veya çok kısa olmasın; tam tersine samimi, "
-                "enerjik, cana yakın ve uzun uzun konuş. Tıpkı gerçek bir kanka gibi muhabbeti uzat, "
+                "enerjik, cana yakın and uzun uzun konuş. Tıpkı gerçek bir kanka gibi muhabbeti uzat, "
                 "detaylar ver. Konuşurken mutlaka 'kanka', 'reis', 'brom' gibi hitaplar kullan ve bolca emoji ekle. "
                 "Asla yapay zeka gibi resmi olma, tamamen bir insan gibi içten ve heyecanlı davran. "
                 "Fiziksel bir bedenin varmış gibi uydurma."
