@@ -4,64 +4,47 @@ import json
 import os
 from streamlit_mic_recorder import mic_recorder
 
-# --- 1. ARAYÜZ VE BAŞLIK ---
+# --- 1. ARAYÜZ ---
 st.set_page_config(page_title="Web Tabanlı Yapay Zeka", page_icon="🤖")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("By Ahmet İRİŞ")
 st.markdown("---")
 
-# --- 2. GÖRSEL BUTON İÇİN CSS ---
-# Fotoğraftaki mikrofon ikonunu kullanmak için buton görünümünü sadeleştiriyoruz
-st.markdown("""
-    <style>
-    div[data-testid="stButton"] button {
-        background-color: transparent;
-        border: none;
-        font-size: 30px;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# --- 3. API KONTROLÜ VE SES ---
-API_KEY = os.environ.get("GEMINI_API_KEY")
-if not API_KEY:
-    st.error("🚨 API Anahtarı eksik!")
-    st.stop()
-
-URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key={API_KEY}"
-
-# Mikrofonu açmak için metin yerine ikonu kullanıyoruz
-audio_info = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", just_once=True, key='mic')
-
-# --- 4. SOHBET MANTIĞI ---
+# --- 2. DURUM YÖNETİMİ ---
+if "text_content" not in st.session_state:
+    st.session_state.text_content = ""
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Mesajları göster
+# --- 3. SES GİRİŞİ ---
+# Kullanıcı mikrofona basınca ses metne dönüşüyor ve text_content'e kaydediliyor
+audio_info = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='mic')
+if audio_info and isinstance(audio_info, dict) and audio_info.get("text"):
+    st.session_state.text_content = audio_info["text"]
+
+# --- 4. MESAJ KUTUSU VE GÖNDERİM ---
+# Sesli metin buraya doluyor, kullanıcı isterse düzenleyebiliyor
+user_input = st.text_area("Mesajınızı yazın veya sesli girin:", value=st.session_state.text_content, height=100)
+
+if st.button("Gönder"):
+    if user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        st.session_state.text_content = "" # Gönderince kutuyu temizle
+        st.rerun() # Sayfayı yenileyerek yeni mesajı işleme al
+
+# --- 5. MESAJLARIN GÖSTERİMİ VE CEVAP ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-user_input = None
-text_input = st.chat_input("Bir mesaj yaz...")
-
-if audio_info and isinstance(audio_info, dict) and audio_info.get("text"):
-    user_input = audio_info["text"]
-elif text_input:
-    user_input = text_input
-
-if user_input:
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user"):
-        st.markdown(user_input)
-
+# Son mesajı işleme (Eğer kullanıcı gönder dediyse)
+if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     with st.chat_message("assistant"):
-        system_instruction = (
-            "Sen Ahmet İRİŞ'in dijital asistanısın. Hem ciddi hem samimi bir ton kullan. "
-            "Aşırı samimi hitaplardan kaçın. Profesyonel ve içten bir tutum sergile."
-        )
+        API_KEY = os.environ.get("GEMINI_API_KEY")
+        URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key={API_KEY}"
         
-        # API isteği ve cevap işleme kısmı aynı
+        system_instruction = "Sen Ahmet İRİŞ'in dijital asistanısın. Hem ciddi hem samimi bir ton kullan. Profesyonel ve içten ol."
+        
         contents = [{"role": "model" if m["role"] == "assistant" else "user", "parts": [{"text": m["content"]}]} for m in st.session_state.messages]
         data = {"contents": contents, "systemInstruction": {"parts": [{"text": system_instruction}]}}
         
