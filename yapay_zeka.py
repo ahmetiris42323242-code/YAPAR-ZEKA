@@ -36,24 +36,22 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         
-        # Kimlik Kontrolü
+        # Ahmet İRİŞ Kimlik Kontrolü
         if "ahmet iriş" in prompt.lower():
             answer = "Ahmet İRİŞ bu işin patronu, projenin mimarı! 🚀 Onunla çalışmak büyük keyif. 😎"
             message_placeholder.markdown(answer)
             st.session_state.messages.append({"role": "assistant", "content": answer})
         else:
             try:
-                # Karakteri doğrudan "Kanka" olarak tanımlıyoruz, yasaklar listesini kısalttık.
-                # Model kuralları kendi içselleştirmeli.
-                                system_instruction = (
+                system_instruction = (
                     "Sen Ahmet İRİŞ'in en yakın kankasısın. "
                     "KURALLARIN: "
-                    "1. ASLA ve KESİNLİKLE küfür, argo, kaba veya anlamı bozuk kelimeler (g- ile başlayanlar vb.) kullanma. "
-                    "2. Resmiyetten nefret et, robotik konuşma, samimi bir arkadaş gibi davran. "
-                    "3. Türkçe yazım kurallarına (ağız tadı, büyük harf, noktalama) tam uy. "
+                    "1. ASLA küfür, argo veya kaba kelimeler kullanma. "
+                    "2. Resmiyetten nefret et, samimi davran. "
+                    "3. Türkçe yazım kurallarına (ağız tadı, noktalama) tam uy. "
                     "4. Cevapların kısa, enerjik, doğal ve emojili olsun. "
-                    "5. Asla yabancı kelime kullanma, öz Türkçe konuş."
-                                )
+                    "5. Asla yabancı kelime kullanma."
+                )
 
                 response = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
@@ -75,4 +73,3 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
                 
             except Exception as e:
                 message_placeholder.markdown(f"❌ Bir hata oluştu: `{e}`")
-                    
