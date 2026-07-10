@@ -37,7 +37,7 @@ for i, message in enumerate(st.session_state.messages):
 # --- GİRİŞ PANELİ ---
 col_input, col_file = st.columns([0.85, 0.15])
 with col_input:
-    prompt = st.chat_input("Mesajını yaz veya kod sorununu sor...")
+    prompt = st.chat_input("Mesajını buraya yaz...")
 with col_file:
     uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
 
