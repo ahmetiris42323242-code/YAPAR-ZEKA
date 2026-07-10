@@ -10,25 +10,24 @@ st.caption("Ahmet İRİŞ tarafından yapılmıştır")
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except Exception as e:
-    st.error(f"Groq bağlantısı kurulamadı. Secrets ayarlarını kontrol edin: {e}")
+    st.error(f"Bağlantı hatası: {e}")
 
 # 3. Sohbet Geçmişi
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 4. Asistan Yönetim Paneli
+# 4. Yan Panel
 with st.sidebar:
-    st.write("⚙️ **Asistan Yönetim Paneli**")
     if st.button("Sohbet Geçmişini Temizle 🧹"):
         st.session_state.messages = []
         st.rerun()
 
-# 5. Geçmişi Ekrana Yazdır
+# 5. Mesajları Yazdır
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 6. Kullanıcı Girişi
+# 6. Girdi ve İşleme
 if prompt := st.chat_input("Sorunuzu buraya yazın..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -37,19 +36,24 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         
-        # Ahmet İRİŞ Kimlik Kontrolü
+        # Özel Ahmet İRİŞ Kimlik Kontrolü
         if "ahmet iriş" in prompt.lower():
             answer = "Ahmet İRİŞ bu işin patronu, projenin mimarı! 🚀 Onunla çalışmak büyük keyif. 😎"
             message_placeholder.markdown(answer)
             st.session_state.messages.append({"role": "assistant", "content": answer})
         else:
             try:
-                # Kanka ruhlu, hatasız ve çeşitli yanıtlar veren sistem talimatı
+                # Ultra-Katı Kanka Modu
                 system_content = (
-                    "Sen Ahmet İRİŞ'in geliştirmiş olduğu en yakın kankasısın. "
-                    "Kurallar: 1) Sadece kusursuz Türkçe konuş. 2) Yabancı kelime kullanma. 3) 'Nasılsın' gibi sorulara "
-                    "her seferinde birbirinden farklı, enerjik, samimi ve emojili cevaplar ver. "
-                    "4) Uzun, resmi ve robotik nezaket cümlelerini yasakla. 5) Yazım hatası yapma."
+                    "Sen Ahmet İRİŞ'in en yakın kankasısın. "
+                    "KURALLARIN: "
+                    "1. SADECE kusursuz, edebi ve günlük Türkçe konuş. "
+                    "2. Asla, kesinlikle yabancı kelime (İngilizce dahil) kullanma. "
+                    "3. Yazım hatası yapma, noktalama işaretlerini doğru kullan. "
+                    "4. 'Nasılsın' sorularına her seferinde farklı, yaratıcı, kısa ve samimi cevaplar ver. "
+                    "5. Asla 'Seni tanımak güzel', 'Yardımcı olmaya hazırım' gibi robotik nezaket cümleleri kurma. "
+                    "6. Her cevabın sonuna mutlaka uygun bir emoji ekle. "
+                    "7. Asla kendi kendine 'Ben Ahmet İRİŞ'im' deme, sadece onun kankası olduğunu belirt."
                 )
 
                 response = client.chat.completions.create(
@@ -72,4 +76,3 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
                 
             except Exception as e:
                 message_placeholder.markdown(f"❌ Bir hata oluştu: `{e}`")
-    
