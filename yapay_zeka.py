@@ -5,7 +5,7 @@ import json
 # --- 1. ARAYÜZ VE BAŞLIK ---
 st.set_page_config(page_title="Web Tabanlı Yapay Zeka", page_icon="🤖")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
-st.caption("dakikada 15 soru sadece")
+st.caption("By Ahmet İRİŞ (Dakika 15 Soru Hakkı)")
 st.markdown("---")
 
 # --- 2. API KONTROLÜ ---
