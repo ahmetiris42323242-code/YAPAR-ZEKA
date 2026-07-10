@@ -16,7 +16,7 @@ except:
     st.error("🚨 API Anahtarı bulunamadı! 'Manage Secrets' kısmına GEMINI_API_KEY ekleyin.")
     st.stop()
 
-URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key={API_KEY}"
+URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key={API_KEY}"
 
 # --- 3. SOHBET GEÇMİŞİ ---
 if "messages" not in st.session_state:
