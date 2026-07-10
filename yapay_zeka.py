@@ -1,21 +1,20 @@
 import streamlit as st
 from groq import Groq
 
-# --- 1. SAYFA VE GÖRÜNÜM AYARLARI ---
-st.set_page_config(page_title="Ahmet İRİŞ - Yapay Zeka", page_icon="🤖")
+# 1. GÖRÜNÜM VE BAŞLIK
+st.set_page_config(page_title="Web Tabanlı Yapay Zeka", page_icon="🤖")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("Ahmet İRİŞ tarafından yapılmıştır")
-st.markdown("---")
+st.divider()
 
-# --- 2. API BAĞLANTISI ---
+# 2. API KONTROLÜ
 if "GROQ_API_KEY" not in st.secrets:
-    st.error("🚨 API Anahtarı eksik! Lütfen Streamlit ayarlarından (Secrets) GROQ_API_KEY ekle.")
+    st.error("API Anahtarı bulunamadı! Lütfen Streamlit Secrets paneline GROQ_API_KEY ekleyin.")
     st.stop()
 
-# Groq istemcisini başlat
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- 3. SOHBET GEÇMİŞİ (HAFIZA) ---
+# 3. HAFIZA OLUŞTURMA
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -24,46 +23,37 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# --- 4. YENİ MESAJ GÖNDERME VE CEVAP ALMA ---
-if prompt := st.chat_input("Bir şeyler yaz kanka..."):
+# 4. MESAJ GÖNDERME VE YANIT ALMA
+if prompt := st.chat_input("Bir şeyler yaz..."):
     
-    # Kullanıcının mesajını ekle ve göster
+    # Kullanıcı mesajını ekle
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Yapay zeka cevabı
+    # Yapay zeka yanıtını al
     with st.chat_message("assistant"):
-        with st.spinner("Kankan düşünüyor..."):
-            try:
-                # Karakter ayarları (System Prompt)
-                system_prompt = {
-                    "role": "system", 
-                    "content": (
-                        "Sen Ahmet İRİŞ'in en yakın kankasısın. Sadece Türkçe konuş. "
-                        "Cevapların çok kısa, net ve samimi olsun. Mutlaka emoji kullan. "
-                        "Asla soru sorma. Fiziksel bir bedenin varmış gibi (uyudum, koştum) yalanlar uydurma."
-                    )
-                }
-                
-                # API'ye gönderilecek mesaj listesini hazırla
-                messages_to_send = [system_prompt]
-                for msg in st.session_state.messages:
-                    messages_to_send.append(msg)
+        # Sistem talimatını sadece API'ye gönderirken araya sıkıştırıyoruz
+        sistem_mesaji = {
+            "role": "system", 
+            "content": "Sen Ahmet İRİŞ'in en yakın kankasısın. Çok kısa, samimi ve Türkçe konuş. Mutlaka emoji kullan. Asla soru sorma. Fiziksel bir bedenin varmış gibi eylemler uydurma."
+        }
+        
+        gonderilecek_mesajlar = [sistem_mesaji] + st.session_state.messages
 
-                # API'den cevabı tek seferde al (stream=False o log hatasını kesin çözer)
-                response = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=messages_to_send,
-                    stream=False
-                )
-                
-                # Sadece temiz metni alıp ekrana bas
-                cevap = response.choices[0].message.content
-                st.markdown(cevap)
-                
-                # Cevabı hafızaya kaydet
-                st.session_state.messages.append({"role": "assistant", "content": cevap})
-                
-            except Exception as e:
-                st.error(f"Sistemsel bir hata oluştu: {e}")
+        try:
+            # stream=False kullanılarak yarım yamalak JSON döküntüleri engellendi
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=gonderilecek_mesajlar,
+                stream=False
+            )
+            
+            cevap = response.choices[0].message.content
+            st.markdown(cevap)
+            
+            # Asistanın yanıtını hafızaya ekle
+            st.session_state.messages.append({"role": "assistant", "content": cevap})
+            
+        except Exception as e:
+            st.error(f"Hata oluştu: {e}")
