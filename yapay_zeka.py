@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import json
 
-# --- 1. SAYFA VE GÖRÜNÜM AYARLARI ---
+# --- 1. ARAYÜZ VE BAŞLIK ---
 st.set_page_config(page_title="Web Tabanlı Yapay Zeka", page_icon="🤖")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("Ahmet İRİŞ tarafından yapılmıştır")
@@ -10,7 +10,7 @@ st.markdown("---")
 
 # --- 2. API KONTROLÜ ---
 if "OPENROUTER_API_KEY" not in st.secrets:
-    st.error("🚨 API Anahtarı eksik! Lütfen Streamlit Secrets paneline OPENROUTER_API_KEY ekle.")
+    st.error("🚨 API Anahtarı eksik! Lütfen Streamlit Secrets paneline OPENROUTER_API_KEY ekleyin.")
     st.stop()
 
 API_KEY = st.secrets["OPENROUTER_API_KEY"]
@@ -20,30 +20,33 @@ URL = "https://openrouter.ai/api/v1/chat/completions"
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Eski mesajları ekrana bas
+# Eski sohbeti ekrana yansıt
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# --- 4. YENİ MESAJ GÖNDERME VE CEVAP ALMA ---
+# --- 4. KULLANICI GİRDİSİ VE YANIT ---
 if prompt := st.chat_input("Bir şeyler yaz kanka..."):
     
+    # Kullanıcı mesajını ekle ve ekranyaz
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # Yapay zeka yanıt penceresi
     with st.chat_message("assistant"):
         try:
+            # Yapay zekanın karakter talimatı
             system_prompt = {
                 "role": "system", 
                 "content": (
                     "Sen Ahmet İRİŞ'in en yakın kankasısın. Sadece Türkçe konuş. "
-                    "Cevapların çok kısa, net ve samimi olsun. Mutlaka emoji kullan. "
-                    "Asla soru sorma. Fiziksel bir bedenin varmış gibi (uyudum, koştum) yalanlar uydurma."
+                    "Cevapların çok kısa, samimi ve net olsun. Mutlaka emoji kullan. "
+                    "Asla soru sorma. Fiziksel bir bedenin varmış gibi uydurma."
                 )
             }
             
-            # Mesajları hazırla
+            # Geçmişle talimatı birleştir
             messages_to_send = [system_prompt] + st.session_state.messages
 
             headers = {
@@ -51,23 +54,26 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
                 "Content-Type": "application/json"
             }
 
-            # OpenRouter üzerindeki ücretsiz Llama 3 modelini çağırıyoruz
+            # openrouter/free sistemi otomatik olarak en stabil ücretsiz modeli seçer
             data = {
-                "model": "meta-llama/llama-3-8b-instruct:free",
+                "model": "openrouter/free",
                 "messages": messages_to_send
             }
 
-            # İsteği gönder (stream kapalı, temiz veri gelecek)
+            # İsteği gönder (stream=False ile temiz metin alınır)
             response = requests.post(URL, headers=headers, data=json.dumps(data))
             response_json = response.json()
 
-            # Gelen yanıtı ayıkla
-            if "choices" in response_json:
+            # Yanıtı kontrol et ve ekrana bas
+            if "choices" in response_json and len(response_json["choices"]) > 0:
                 cevap = response_json["choices"][0]["message"]["content"]
                 st.markdown(cevap)
+                # Hafızaya ekle
                 st.session_state.messages.append({"role": "assistant", "content": cevap})
             else:
-                st.error("OpenRouter tarafında bir sorun oluştu veya kota doldu.")
+                # OpenRouter hata döndüyse detayını ekrana bas ki anlayalım
+                hata_mesaji = response_json.get("error", {}).get("message", "Bilinmeyen bir hata oluştu.")
+                st.error(f"Sistem Hatası: {hata_mesaji}")
                 
         except Exception as e:
-            st.error(f"Bağlantı hatası: {e}")
+            st.error(f"Bağlantı Hatası: {e}")
