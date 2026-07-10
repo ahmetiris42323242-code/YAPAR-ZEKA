@@ -56,7 +56,7 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
 
             # Tamamen Google altyapısı, Meta kesinlikle yok! çok hızlı ve ücretsiz.
             data = {
-                "model": "mistralai/mistral-7b-instruct:free",
+                "model": "deepseek/deepseek-chat:free",
                 "messages": messages_to_send
             }
 
