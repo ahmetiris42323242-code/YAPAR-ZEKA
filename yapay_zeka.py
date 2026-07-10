@@ -1,20 +1,22 @@
 import streamlit as st
-from groq import Groq
+import requests
+import json
 
-# 1. GÖRÜNÜM VE BAŞLIK
+# --- 1. SAYFA VE GÖRÜNÜM AYARLARI ---
 st.set_page_config(page_title="Web Tabanlı Yapay Zeka", page_icon="🤖")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("Ahmet İRİŞ tarafından yapılmıştır")
-st.divider()
+st.markdown("---")
 
-# 2. API KONTROLÜ
-if "GROQ_API_KEY" not in st.secrets:
-    st.error("API Anahtarı bulunamadı! Lütfen Streamlit Secrets paneline GROQ_API_KEY ekleyin.")
+# --- 2. API KONTROLÜ ---
+if "OPENROUTER_API_KEY" not in st.secrets:
+    st.error("🚨 API Anahtarı eksik! Lütfen Streamlit Secrets paneline OPENROUTER_API_KEY ekle.")
     st.stop()
 
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+API_KEY = st.secrets["OPENROUTER_API_KEY"]
+URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# 3. HAFIZA OLUŞTURMA
+# --- 3. SOHBET GEÇMİŞİ (HAFIZA) ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -23,37 +25,49 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 4. MESAJ GÖNDERME VE YANIT ALMA
-if prompt := st.chat_input("Bir şeyler yaz..."):
+# --- 4. YENİ MESAJ GÖNDERME VE CEVAP ALMA ---
+if prompt := st.chat_input("Bir şeyler yaz kanka..."):
     
-    # Kullanıcı mesajını ekle
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Yapay zeka yanıtını al
     with st.chat_message("assistant"):
-        # Sistem talimatını sadece API'ye gönderirken araya sıkıştırıyoruz
-        sistem_mesaji = {
-            "role": "system", 
-            "content": "Sen Ahmet İRİŞ'in en yakın kankasısın. Çok kısa, samimi ve Türkçe konuş. Mutlaka emoji kullan. Asla soru sorma. Fiziksel bir bedenin varmış gibi eylemler uydurma."
-        }
-        
-        gonderilecek_mesajlar = [sistem_mesaji] + st.session_state.messages
-
         try:
-            # stream=False kullanılarak yarım yamalak JSON döküntüleri engellendi
-            response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=gonderilecek_mesajlar,
-                stream=False
-            )
+            system_prompt = {
+                "role": "system", 
+                "content": (
+                    "Sen Ahmet İRİŞ'in en yakın kankasısın. Sadece Türkçe konuş. "
+                    "Cevapların çok kısa, net ve samimi olsun. Mutlaka emoji kullan. "
+                    "Asla soru sorma. Fiziksel bir bedenin varmış gibi (uyudum, koştum) yalanlar uydurma."
+                )
+            }
             
-            cevap = response.choices[0].message.content
-            st.markdown(cevap)
-            
-            # Asistanın yanıtını hafızaya ekle
-            st.session_state.messages.append({"role": "assistant", "content": cevap})
-            
+            # Mesajları hazırla
+            messages_to_send = [system_prompt] + st.session_state.messages
+
+            headers = {
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json"
+            }
+
+            # OpenRouter üzerindeki ücretsiz Llama 3 modelini çağırıyoruz
+            data = {
+                "model": "meta-llama/llama-3-8b-instruct:free",
+                "messages": messages_to_send
+            }
+
+            # İsteği gönder (stream kapalı, temiz veri gelecek)
+            response = requests.post(URL, headers=headers, data=json.dumps(data))
+            response_json = response.json()
+
+            # Gelen yanıtı ayıkla
+            if "choices" in response_json:
+                cevap = response_json["choices"][0]["message"]["content"]
+                st.markdown(cevap)
+                st.session_state.messages.append({"role": "assistant", "content": cevap})
+            else:
+                st.error("OpenRouter tarafında bir sorun oluştu veya kota doldu.")
+                
         except Exception as e:
-            st.error(f"Hata oluştu: {e}")
+            st.error(f"Bağlantı hatası: {e}")
