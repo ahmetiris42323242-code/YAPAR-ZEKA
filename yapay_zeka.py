@@ -1,40 +1,6 @@
-import streamlit as st
-import google.generativeai as genai
-
-# 1. SAYFA VE GÖRSEL AYARLAR
-st.set_page_config(page_title="Herkes İçin Yapay Zeka", page_icon="🤖", layout="centered")
-
-# BURASI GERİ GELDİ: Başlık ve İsim İmzası
-st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
-st.caption("Ahmet İRİŞ tarafından yapılmıştır")
-st.write("Gelişmiş, kotasız ve tamamen akıllı yapay zeka asistanı.")
-
-# 2. GEMINI API BAĞLANTISI
-try:
-    API_KEY = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=API_KEY)
-except Exception as e:
-    st.error(f"API anahtarı bulunamadı! Lütfen Streamlit ayarlarından GEMINI_API_KEY'i doğru eklediğinden emin ol. Hata: {e}")
-
-# 3. SOHBET GEÇMİŞİ VE YÖNETİMİ
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# Asistan Yönetim Paneli
-with st.sidebar:
-    st.write("⚙️ **Asistan Yönetim Paneli**")
-    if st.button("Sohbet Geçmişini Temizle 🧹"):
-        st.session_state.messages = []
-        st.rerun()
-
-# Mesajları Ekrana Yaz
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# 4. GİRDİ İŞLEME VE KİMLİK KORUMASI
-if prompt := st.chat_input("Sorunuzu buraya yazın..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
+streamlit
+groq
+st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
