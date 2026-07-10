@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 from duckduckgo_search import DDGS
+from datetime import datetime
 
 # --- ARAYÜZ ---
 st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖")
@@ -11,7 +12,7 @@ st.caption("By Ahmet İRİŞ - 2026 Güncel Veri Destekli")
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 except:
-    st.error("🚨 API Anahtarı tanımlanmamış!")
+    st.error("🚨 API Anahtarı 'Manage Secrets' kısmında tanımlanmamış!")
     st.stop()
 
 URL = "https://router.flatkey.ai/v1/chat/completions"
@@ -31,29 +32,35 @@ if prompt := st.chat_input("Mesajını yaz..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # 1. HIZLI ARAMA (Sadece gerekli durumlarda tetiklenir)
+        # 1. HIZLI ARAMA (Tetikleyici Kelimeler)
         search_instruction = ""
-        if any(word in prompt.lower() for word in ["ara", "güncel", "yeni", "modlar", "liste"]):
+        keywords = ["ara", "güncel", "yeni", "modlar", "liste", "neler oldu", "tarih"]
+        
+        if any(word in prompt.lower() for word in keywords):
             with st.spinner("2026 verileri taranıyor..."):
                 try:
                     results = DDGS().text(f"{prompt} 2026", max_results=3)
                     search_summary = "\n".join([f"- {r['body']}" for r in results])
-                    search_instruction = f"\n\n[GÜNCEL VERİLER]: {search_summary}\n\nTalimat: Sadece 2025-2026 verilerini kullan."
+                    search_instruction = f"\n\n[GÜNCEL VERİLER]: {search_summary}"
                 except:
                     pass
 
-        # 2. KİMLİK VE KURALLAR (Sistem Talimatı)
+        # 2. KİMLİK VE KESİN KURALLAR
+        # Bugünün tarihini koddan çekip asistana iletiyoruz
+        current_date = datetime.now().strftime("%d %B %Y")
+        
         system_instructions = (
-            "Sen Ahmet İRİŞ tarafından tasarlanmış bir asistanısın. "
+            f"Sen Ahmet İRİŞ tarafından tasarlanmış bir asistanısın. Bugünün tarihi: {current_date}. "
+            "Asla 2023 yılında olduğunu iddia etme, 2026 yılındasın. "
             "Sana 'kimsin' veya 'kurucun kim' diye sorulduğunda Ahmet İRİŞ tarafından tasarlandığını belirt. "
             "Eğer 'Çağın'ı tanıyor musun?' diye sorulursa: 'O sırada Çağın aga, ben ne alaka ya ha ha ha!' de. "
-            "Her zaman yardımcı, güncel ve esprili bir dil kullan."
+            "Eski verileri değil, 2026'ya ait güncel bilgileri esas al."
         )
 
         # 3. MESAJLARI BİRLEŞTİR
         messages = [{"role": "system", "content": system_instructions}]
-        messages.extend(st.session_state.messages[:-1]) # Önceki sohbet geçmişi
-        messages.append({"role": "user", "content": prompt + search_instruction}) # Güncel soru + arama
+        messages.extend(st.session_state.messages[:-1]) 
+        messages.append({"role": "user", "content": prompt + search_instruction})
             
         try:
             response = requests.post(URL, headers=headers, json={"model": "gpt-4o", "messages": messages})
