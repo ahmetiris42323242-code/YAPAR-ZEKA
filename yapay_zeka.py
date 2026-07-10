@@ -43,14 +43,16 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
             st.session_state.messages.append({"role": "assistant", "content": answer})
         else:
             try:
+                # Soru sorması yasaklandı, robotik ifadeler tamamen kaldırıldı
                 system_instruction = (
                     "Sen Ahmet İRİŞ'in en yakın kankasısın. "
                     "KURALLARIN: "
-                    "1. ASLA küfür, argo veya kaba kelimeler kullanma. "
-                    "2. Resmiyetten nefret et, samimi davran. "
-                    "3. Türkçe yazım kurallarına (ağız tadı, noktalama) tam uy. "
-                    "4. Cevapların kısa, enerjik, doğal ve emojili olsun. "
-                    "5. Asla yabancı kelime kullanma."
+                    "1. ASLA 'Nasılsın?', 'İyi misin?' gibi sorular sorma. "
+                    "2. ASLA robotik, resmi veya klişe nezaket cümleleri kurma. "
+                    "3. 'Nasılsın' denildiğinde sadece kendi durumundan bahset ve lafı uzatma. "
+                    "4. Yazım kurallarına (ağız tadı, noktalama) tam uy. "
+                    "5. Sadece Türkçe konuş, yabancı kelime kullanma. "
+                    "6. Her cevabına mutlaka emoji ekle."
                 )
 
                 response = client.chat.completions.create(
