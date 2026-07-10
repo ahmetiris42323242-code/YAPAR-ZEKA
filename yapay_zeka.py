@@ -7,15 +7,17 @@ st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("By Ahmet İRİŞ")
 
 # --- API AYARLARI ---
+# Not: Manage Secrets kısmında anahtarının isminin GEMINI_API_KEY kalmasında bir sakınca yok, 
+# ama istersen FLATKEY_API_KEY olarak değiştirebilirsin.
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 except:
     st.error("🚨 API Anahtarı 'Manage Secrets' kısmında tanımlanmamış!")
     st.stop()
 
-# Listeden onayladığımız model ismi
-MODEL = "gemini-2.0-flash"
-URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={API_KEY}"
+# Flatkey için OpenAI uyumlu URL ve Model
+URL = "https://api.flatkey.ai/v1/chat/completions"
+MODEL = "gpt-4o" # Flatkey'in sunduğu modellerden birini buraya yazabilirsin
 
 # --- SOHBET ---
 if "messages" not in st.session_state:
@@ -31,23 +33,26 @@ if prompt := st.chat_input("Mesajını yaz..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # Mesaj geçmişini API'ye uygun formata getir
-        history = []
-        for m in st.session_state.messages:
-            role = "user" if m["role"] == "user" else "model"
-            history.append({"role": role, "parts": [{"text": m["content"]}]})
-            
-        payload = {"contents": history}
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        # OpenAI formatında mesaj gönderimi
+        payload = {
+            "model": MODEL,
+            "messages": [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+        }
         
         try:
-            response = requests.post(URL, json=payload)
+            response = requests.post(URL, headers=headers, json=payload)
             
             if response.status_code == 200:
-                answer = response.json()['candidates'][0]['content']['parts'][0]['text']
+                answer = response.json()['choices'][0]['message']['content']
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
                 st.error(f"Hata Kodu: {response.status_code}")
-                st.write(response.json())
+                st.write(response.text)
         except Exception as e:
             st.error(f"Bağlantı Hatası: {e}")
