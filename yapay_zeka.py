@@ -7,17 +7,19 @@ st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("By Ahmet İRİŞ")
 
 # --- API AYARLARI ---
-# Not: Manage Secrets kısmında anahtarının isminin GEMINI_API_KEY kalmasında bir sakınca yok, 
-# ama istersen FLATKEY_API_KEY olarak değiştirebilirsin.
+# Secret kısmına anahtarını mutlaka yeni oluşturduğun anahtarla güncelle
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 except:
-    st.error("🚨 API Anahtarı 'Manage Secrets' kısmında tanımlanmamış!")
+    st.error("🚨 API Anahtarı tanımlanmamış!")
     st.stop()
 
-# Flatkey için OpenAI uyumlu URL ve Model
-URL = "https://api.flatkey.ai/v1/chat/completions"
-MODEL = "gpt-4o" # Flatkey'in sunduğu modellerden birini buraya yazabilirsin
+# Flatkey Router URL ve Başlık Yapısı
+URL = "https://router.flatkey.ai/v1/chat/completions" # Router üzerinden standart chat endpoint'i
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
 
 # --- SOHBET ---
 if "messages" not in st.session_state:
@@ -33,14 +35,9 @@ if prompt := st.chat_input("Mesajını yaz..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        headers = {
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json"
-        }
-        
-        # OpenAI formatında mesaj gönderimi
+        # Flatkey router için payload
         payload = {
-            "model": MODEL,
+            "model": "gpt-4o", # Router'ın varsayılan veya seçili modeli
             "messages": [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
         }
         
@@ -53,6 +50,6 @@ if prompt := st.chat_input("Mesajını yaz..."):
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
                 st.error(f"Hata Kodu: {response.status_code}")
-                st.write(response.text)
+                st.write(response.json())
         except Exception as e:
             st.error(f"Bağlantı Hatası: {e}")
