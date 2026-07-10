@@ -5,7 +5,7 @@ import json
 # --- 1. ARAYÜZ VE BAŞLIK ---
 st.set_page_config(page_title="Web Tabanlı Yapay Zeka", page_icon="🤖")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
-st.caption("Ahmet İRİŞ tarafından yapılmıştır")
+st.caption("dakikada 15 soru sadece")
 st.markdown("---")
 
 # --- 2. API KONTROLÜ ---
@@ -14,7 +14,6 @@ if "GEMINI_API_KEY" not in st.secrets:
     st.stop()
 
 API_KEY = st.secrets["GEMINI_API_KEY"]
-# Akıcı veri için 'streamGenerateContent' endpoint'ini kullanıyoruz
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key={API_KEY}"
 
 # --- 3. SOHBET GEÇMİŞİ (HAFIZA) ---
@@ -74,22 +73,17 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
             for line in response.iter_lines():
                 if line:
                     decoded_line = line.decode('utf-8').strip()
-                    # Google API'sinin stream formatını temizleme
                     if decoded_line.startswith('"text":'):
                         try:
-                            # Kelimeyi ayıkla
                             kelime = decoded_line.split('"text":')[1].strip().strip('"').replace('\\n', '\n')
                             tam_cevap += kelime
-                            # Anlık olarak ekrandaki yazıyı güncelle
                             cevap_kutusu.markdown(tam_cevap)
                         except:
                             continue
             
-            # Eğer boş kalmadıysa hafızaya ekle
             if tam_cevap:
                 st.session_state.messages.append({"role": "assistant", "content": tam_cevap})
             else:
-                # Yedek kontrol (Eğer stream formatı çözülemezse düz metin olarak bas)
                 try:
                     res_json = response.json()
                     cevap = res_json[0]["candidates"][0]["content"]["parts"][0]["text"]
