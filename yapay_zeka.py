@@ -56,7 +56,7 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
 
             # Tamamen Google altyapısı, Meta kesinlikle yok! çok hızlı ve ücretsiz.
             data = {
-                "model": "google/gemma-2-9b-it:free",
+                "model": "mistralai/mistral-7b-instruct:free",
                 "messages": messages_to_send
             }
 
