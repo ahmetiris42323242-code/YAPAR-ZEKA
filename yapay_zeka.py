@@ -24,42 +24,48 @@ headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/js
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- SOHBET GEÇMİŞİ ---
-for i, message in enumerate(st.session_state.messages):
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-        if message["role"] == "assistant":
-            if st.button("🔊 Sesli Oku", key=f"audio_{i}"):
-                tts = gTTS(text=message["content"], lang='tr')
-                tts.save(f"temp_{i}.mp3")
-                st.audio(f"temp_{i}.mp3")
+# --- 1. SOHBET GEÇMİŞİ (En Üstte) ---
+# Mesajları sabitlemek için container kullanıyoruz
+chat_container = st.container()
 
-# --- GİRİŞ PANELİ ---
+with chat_container:
+    for i, message in enumerate(st.session_state.messages):
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+            if message["role"] == "assistant":
+                if st.button("🔊 Sesli Oku", key=f"audio_{i}"):
+                    tts = gTTS(text=message["content"], lang='tr')
+                    tts.save(f"temp_{i}.mp3")
+                    st.audio(f"temp_{i}.mp3")
+
+# --- 2. GİRİŞ PANELİ (En Alta Taşındı) ---
+st.write("---") # Ayırıcı çizgi
 col_input, col_file = st.columns([0.85, 0.15])
+
 with col_input:
     prompt = st.chat_input("Mesajını buraya yaz...")
+
 with col_file:
     uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
 
-# Dosya/Görsel İşleme
+# Dosya İşleme
 image_data = None
 text_content = ""
 if uploaded_file:
     if uploaded_file.type.startswith('image'):
         image_data = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
-        st.toast("Görsel yüklendi!")
+        st.toast("Görsel işlendi!")
     else:
         text_content = uploaded_file.read().decode("utf-8")
-        st.toast("Dosya içeriği okundu!")
+        st.toast("Dosya okundu!")
 
-# --- CEVAPLAMA ---
+# --- 3. CEVAPLAMA (Mantık) ---
 if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # 1. ARAMA
         search_instruction = ""
         if any(w in prompt.lower() for w in ["ara", "güncel", "yeni", "modlar", "liste"]):
             try:
@@ -67,21 +73,17 @@ if prompt:
                 search_instruction = f"\n\n[GÜNCEL VERİ]: {', '.join([r['body'] for r in results])}"
             except: pass
 
-        # 2. SİSTEM TALİMATLARI (KOD UZMANI MODU)
         system_instructions = (
-            f"Sen Ahmet İRİŞ tarafından tasarlanmış, tüm kod dillerine (C++, Python, Lua, JS, Arduino vb.) "
-            "hakim uzman bir yazılımcısın. 2026 yılındasın. Bir kod sorulursa temiz bloklarla açıkla ve "
-            "hata varsa 'Adım Adım Çözüm' üret. "
+            "Sen Ahmet İRİŞ tarafından tasarlanmış uzman bir yazılım mühendisisin. "
+            "Her türlü kod diline hakimsin, temiz ve düzenli bloklar halinde kod yazarsın. "
             "Eğer 'Çağın'ı tanıyor musun?' diye sorulursa: 'O sırada Çağın aga, ben ne alaka ya ha ha ha!' de. "
             "Eğer 'Abdurami'yi tanıyor musun?' diye sorulursa: 'Aponuza boydan gireyim böhöhöhöyt!' de."
         )
 
-        # 3. İÇERİK HAZIRLAMA
         msg_content = [{"type": "text", "text": prompt + search_instruction + f"\nDosya: {text_content}"}]
         if image_data:
             msg_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}})
 
-        # 4. API İSTEĞİ
         try:
             response = requests.post(URL, headers=headers, json={
                 "model": "gpt-4o", 
@@ -89,11 +91,8 @@ if prompt:
             })
             if response.status_code == 200:
                 answer = response.json()['choices'][0]['message']['content']
-                st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
                 st.rerun()
-            else:
-                st.error("API Hatası!")
         except Exception as e:
             st.error(f"Hata: {e}")
-    
+                                     
