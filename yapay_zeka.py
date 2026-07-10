@@ -10,16 +10,21 @@ st.caption("By Ahmet İRİŞ (Dakika da 15 Soru Hakkı)")
 st.write("🌐 **API Sunucu Adresi:** generativelanguage.googleapis.com")
 st.markdown("---")
 
-# --- 2. API KONTROLÜ (GÜÇLENDİRİLMİŞ SÜRÜM) ---
+# --- 2. API KONTROLÜ (RENDER VE HER YER İÇİN EN TEMİZ SÜRÜM) ---
 API_KEY = None
 
-# Önce Render ortam değişkenlerine bak, yoksa Streamlit secrets dene
+# Önce Render ortam değişkenlerine bakıyoruz
 if "GEMINI_API_KEY" in os.environ:
     API_KEY = os.environ["GEMINI_API_KEY"]
-elif "GEMINI_API_KEY" in st.secrets:
-    API_KEY = st.secrets["GEMINI_API_KEY"]
+else:
+    # Eğer localde veya başka yerde st.secrets varsa oradan dene, yoksa hata verme
+    try:
+        if "GEMINI_API_KEY" in st.secrets:
+            API_KEY = st.secrets["GEMINI_API_KEY"]
+    except:
+        pass
 
-# Eğer ikisinde de bulamazsa hata ver ve durdur
+# Eğer hiçbir yerde bulamazsa durdur
 if not API_KEY:
     st.error("🚨 API Anahtarı eksik! Lütfen Render panelinden Environment Variables kısmına GEMINI_API_KEY ekleyin.")
     st.stop()
@@ -49,7 +54,7 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
             system_instruction = (
                 "Sen Ahmet İRİŞ'in en yakın kankası, can dostusun. Sadece Türkçe konuş. "
                 "Cevapların asla tek kelime veya çok kısa olmasın; tam tersine samimi, "
-                "enerjik, cana yakın and uzun uzun konuş. Tıpkı gerçek bir kanka gibi muhabbeti uzat, "
+                "enerjik, cana yakın ve uzun uzun konuş. Tıpkı gerçek bir kanka gibi muhabbeti uzat, "
                 "detaylar ver. Konuşurken mutlaka 'kanka', 'reis', 'brom' gibi hitaplar kullan ve bolca emoji ekle. "
                 "Asla yapay zeka gibi resmi olma, tamamen bir insan gibi içten ve heyecanlı davran. "
                 "Fiziksel bir bedenin varmış gibi uydurma."
