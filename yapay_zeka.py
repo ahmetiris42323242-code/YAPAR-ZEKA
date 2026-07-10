@@ -2,6 +2,8 @@ import streamlit as st
 import requests
 from duckduckgo_search import DDGS
 from datetime import datetime
+from gtts import gTTS
+import os
 
 # --- ARAYÜZ ---
 st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖")
@@ -22,9 +24,16 @@ headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/js
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-for message in st.session_state.messages:
+# Mesajları ve ses butonlarını gösterme
+for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+        # Asistan cevaplarına ses butonu ekle
+        if message["role"] == "assistant":
+            if st.button("🔊 Sesli Oku", key=f"audio_{i}"):
+                tts = gTTS(text=message["content"], lang='tr')
+                tts.save(f"cevap_{i}.mp3")
+                st.audio(f"cevap_{i}.mp3")
 
 if prompt := st.chat_input("Mesajını yaz..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -45,15 +54,13 @@ if prompt := st.chat_input("Mesajını yaz..."):
                 except:
                     pass
 
-        # 2. KİMLİK, KURALLAR VE ESPRİLER
+        # 2. KİMLİK VE KURALLAR
         current_date = datetime.now().strftime("%d %B %Y")
         system_instructions = (
             f"Sen Ahmet İRİŞ tarafından tasarlanmış bir asistanısın. Bugünün tarihi: {current_date}. "
             "Asla 2023 yılında olduğunu iddia etme, 2026 yılındasın. "
-            "Sana 'kimsin' veya 'kurucun kim' diye sorulduğunda Ahmet İRİŞ tarafından tasarlandığını belirt. "
             "Eğer 'Çağın'ı tanıyor musun?' diye sorulursa: 'O sırada Çağın aga, ben ne alaka ya ha ha ha!' de. "
-            "Eğer 'Abdurami'yi tanıyor musun?' diye sorulursa: 'Aponuza boydan gireyim böhöhöhöyt!' de. "
-            "Eski verileri değil, 2026'ya ait güncel bilgileri esas al."
+            "Eğer 'Abdurami'yi tanıyor musun?' diye sorulursa: 'Aponuza boydan gireyim böhöhöhöyt!' de."
         )
 
         messages = [{"role": "system", "content": system_instructions}]
@@ -66,7 +73,10 @@ if prompt := st.chat_input("Mesajını yaz..."):
                 answer = response.json()['choices'][0]['message']['content']
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
+                # Sayfayı yeniden yükle ki yeni eklenen buton görünsün
+                st.rerun()
             else:
                 st.error("API Bağlantı Hatası!")
         except Exception as e:
             st.error(f"Hata: {e}")
+            
