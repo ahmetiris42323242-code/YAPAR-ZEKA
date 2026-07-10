@@ -10,39 +10,45 @@ st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("By Ahmet İRİŞ")
 st.markdown("---")
 
-# --- 2. SES VE API KURULUMU ---
+# --- 2. GÖRSEL BUTON İÇİN CSS ---
+# Fotoğraftaki mikrofon ikonunu kullanmak için buton görünümünü sadeleştiriyoruz
+st.markdown("""
+    <style>
+    div[data-testid="stButton"] button {
+        background-color: transparent;
+        border: none;
+        font-size: 30px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- 3. API KONTROLÜ VE SES ---
 API_KEY = os.environ.get("GEMINI_API_KEY")
-
-# Mikrofon Butonu
-audio_text = mic_recorder(start_prompt="Mikrofonu Aç", stop_prompt="Durdur", just_once=True)
-
 if not API_KEY:
-    st.error("API Anahtarı eksik!")
+    st.error("🚨 API Anahtarı eksik!")
     st.stop()
 
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key={API_KEY}"
 
+# Mikrofonu açmak için metin yerine ikonu kullanıyoruz
+audio_info = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", just_once=True, key='mic')
+
+# --- 4. SOHBET MANTIĞI ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 3. İŞLETİM MANTIĞI ---
-def get_ai_response(text_input):
-    system_instruction = (
-        "Sen Ahmet İRİŞ'in dijital asistanısın. Hem ciddi hem samimi bir ton kullan. "
-        "Aşırı samimi hitaplardan kaçın. Konunun içeriğine göre kısa veya kapsamlı cevaplar ver. "
-        "Profesyonel ve içten bir tutum sergile."
-    )
-    
-    contents = [{"role": "user", "parts": [{"text": text_input}]}]
-    data = {"contents": contents, "systemInstruction": {"parts": [{"text": system_instruction}]}}
-    
-    response = requests.post(URL, headers={"Content-Type": "application/json"}, data=json.dumps(data), stream=True)
-    return response
+# Mesajları göster
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# Metin girişinden veya sesten gelen mesajı işleme
-user_input = st.chat_input("Bir mesaj yaz...")
-if audio_text:
-    user_input = audio_text['text']
+user_input = None
+text_input = st.chat_input("Bir mesaj yaz...")
+
+if audio_info and isinstance(audio_info, dict) and audio_info.get("text"):
+    user_input = audio_info["text"]
+elif text_input:
+    user_input = text_input
 
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
@@ -50,7 +56,16 @@ if user_input:
         st.markdown(user_input)
 
     with st.chat_message("assistant"):
-        response = get_ai_response(user_input)
+        system_instruction = (
+            "Sen Ahmet İRİŞ'in dijital asistanısın. Hem ciddi hem samimi bir ton kullan. "
+            "Aşırı samimi hitaplardan kaçın. Profesyonel ve içten bir tutum sergile."
+        )
+        
+        # API isteği ve cevap işleme kısmı aynı
+        contents = [{"role": "model" if m["role"] == "assistant" else "user", "parts": [{"text": m["content"]}]} for m in st.session_state.messages]
+        data = {"contents": contents, "systemInstruction": {"parts": [{"text": system_instruction}]}}
+        
+        response = requests.post(URL, headers={"Content-Type": "application/json"}, data=json.dumps(data), stream=True)
         cevap_kutusu = st.empty()
         tam_cevap = ""
         for line in response.iter_lines():
