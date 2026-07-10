@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-from duckduckgo_search import DDGS
+import base64
 from datetime import datetime
 from gtts import gTTS
 import os
@@ -10,7 +10,7 @@ st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 
 # --- API AYARLARI ---
-API_KEY = st.secrets["GEMINI_API_KEY"] # Hata kontrolü senin orijinal kodunda var zaten
+API_KEY = st.secrets["GEMINI_API_KEY"]
 URL = "https://router.flatkey.ai/v1/chat/completions"
 headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
@@ -28,43 +28,47 @@ for i, message in enumerate(st.session_state.messages):
                 st.audio(f"cevap_{i}.mp3")
 
 # --- MESAJ VE DOSYA GİRİŞİ ---
-# Butonları ve giriş alanını yan yana/alt alta düzenlemek için kolonlar
 col1, col2 = st.columns([0.8, 0.2])
-
 with col1:
     prompt = st.chat_input("Mesajını yaz...")
-
 with col2:
-    uploaded_file = st.file_uploader("Dosya", type=['txt', 'md'], label_visibility="collapsed")
+    uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
 
-file_content = ""
+# Dosya İşleme
+image_data = None
+text_content = ""
+
 if uploaded_file:
-    file_content = uploaded_file.read().decode("utf-8")
-    st.success("Dosya yüklendi!")
+    if uploaded_file.type.startswith('image'):
+        # Görseli base64 formatına çevir
+        bytes_data = uploaded_file.getvalue()
+        image_data = base64.b64encode(bytes_data).decode('utf-8')
+        st.success("Görsel yüklendi!")
+    else:
+        text_content = uploaded_file.read().decode("utf-8")
+        st.success("Metin dosyası yüklendi!")
 
 if prompt:
-    # Dosya içeriğini prompt ile birleştiriyoruz
-    context_prompt = f"{prompt}\n\n--- YÜKLENEN DOSYA İÇERİĞİ ---\n{file_content}\n-----------------------------" if file_content else prompt
-    
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # Kurallar (senin orijinal kuralların)
-        system_instructions = (
-            f"Sen Ahmet İRİŞ tarafından tasarlanmış bir asistansın. Bugünün tarihi: {datetime.now().strftime('%d %B %Y')}. "
-            "Sana bir dosya içeriği verilirse, bu dosyayı analiz et ve özetle. "
-            "Eğer 'Çağın'ı tanıyor musun?' diye sorulursa: 'O sırada Çağın aga, ben ne alaka ya ha ha ha!' de. "
-            "Eğer 'Abdurami'yi tanıyor musun?' diye sorulursa: 'Aponuza boydan gireyim böhöhöhöyt!' de."
-        )
+        # Görsel varsa içeriğe ekle
+        message_content = [{"type": "text", "text": prompt}]
+        if image_data:
+            message_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}})
+        if text_content:
+            message_content[0]["text"] += f"\n\nDosya İçeriği: {text_content}"
 
-        messages = [{"role": "system", "content": system_instructions}]
-        messages.extend(st.session_state.messages[:-1]) 
-        messages.append({"role": "user", "content": context_prompt})
+        # API Gönderimi
+        payload = {
+            "model": "gpt-4o", # Modelin görseli desteklemesi gerekir
+            "messages": [{"role": "user", "content": message_content}]
+        }
             
         try:
-            response = requests.post(URL, headers=headers, json={"model": "gpt-4o", "messages": messages})
+            response = requests.post(URL, headers=headers, json=payload)
             if response.status_code == 200:
                 answer = response.json()['choices'][0]['message']['content']
                 st.markdown(answer)
@@ -74,4 +78,3 @@ if prompt:
                 st.error("API Bağlantı Hatası!")
         except Exception as e:
             st.error(f"Hata: {e}")
-        
