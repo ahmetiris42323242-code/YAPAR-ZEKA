@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import json
-import os  # Render ortam değişkenini okumak için
+import os
 
 # --- 1. ARAYÜZ VE BAŞLIK ---
 st.set_page_config(page_title="Web Tabanlı Yapay Zeka", page_icon="🤖")
@@ -9,43 +9,39 @@ st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("By Ahmet İRİŞ (Dakika da 15 Soru Hakkı)")
 st.markdown("---")
 
-# --- 2. API KONTROLÜ (SADECE RENDER ORTAM DEĞİŞKENİ) ---
+# --- 2. API KONTROLÜ ---
 API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# Eğer Render panelinde şifre eklenmediyse uyarı ver
 if not API_KEY:
     st.error("🚨 API Anahtarı eksik! Lütfen Render panelinden Environment Variables kısmına GEMINI_API_KEY ekleyin.")
     st.stop()
 
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key={API_KEY}"
 
-# --- 3. SOHBET GEÇMİŞİ (HAFIZA) ---
+# --- 3. SOHBET GEÇMİŞİ ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Eski sohbeti ekrana yansıt
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # --- 4. KULLANICI GİRDİSİ VE YANIT ---
-if prompt := st.chat_input("Bir şeyler yaz kanka..."):
+if prompt := st.chat_input("Bir soru sorun..."):
     
-    # Kullanıcı mesajını ekle ve ekrana yaz
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Yapay zeka yanıt penceresi
     with st.chat_message("assistant"):
         try:
+            # Güncellenmiş sistem talimatı
             system_instruction = (
-                "Sen Ahmet İRİŞ'in en yakın kankası, can dostusun. Sadece Türkçe konuş. "
-                "Cevapların asla tek kelime veya çok kısa olmasın; tam tersine samimi, "
-                "enerjik, cana yakın ve uzun uzun konuş. Tıpkı gerçek bir kanka gibi muhabbeti uzat, "
-                "detaylar ver. Konuşurken mutlaka 'kanka', 'reis', 'brom' gibi hitaplar kullan ve bolca emoji ekle. "
-                "Asla yapay zeka gibi resmi olma, tamamen bir insan gibi içten ve heyecanlı davran. "
-                "Fiziksel bir bedenin varmış gibi uydurma."
+                "Sen Ahmet İRİŞ'in dijital asistanısın. Konuşmalarında hem ciddi hem de samimi bir ton kullan. "
+                "Brom, kanka gibi aşırı samimi hitapları kullanma. "
+                "Cevaplarını konunun içeriğine göre ayarla; basit sorulara kısa ve öz, detay gerektiren "
+                "konulara ise kapsamlı cevaplar ver. Gereksiz uzun cümlelerden ve aşırı emoji kullanımından kaçın. "
+                "Her zaman yardımcı, profesyonel ve içten bir tutum sergile."
             )
             
             contents = []
@@ -64,15 +60,11 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
             }
 
             headers = {"Content-Type": "application/json"}
-
-            # İsteği stream=True olarak gönderiyoruz, veri anlık akacak
             response = requests.post(URL, headers=headers, data=json.dumps(data), stream=True)
             
-            # Streamlit'in anlık yazı yazdırma kutusunu oluşturuyoruz
             cevap_kutusu = st.empty()
             tam_cevap = ""
 
-            # Gelen veriyi satır satır oku ve anında ekrana bas
             for line in response.iter_lines():
                 if line:
                     decoded_line = line.decode('utf-8').strip()
@@ -93,7 +85,7 @@ if prompt := st.chat_input("Bir şeyler yaz kanka..."):
                     cevap_kutusu.markdown(cevap)
                     st.session_state.messages.append({"role": "assistant", "content": cevap})
                 except:
-                    st.error("Bir sorun oluştu kanka, tekrar yazar mısın?")
+                    st.error("Bir hata oluştu, lütfen tekrar deneyin.")
                 
         except Exception as e:
             st.error(f"Bağlantı Hatası: {e}")
