@@ -34,21 +34,27 @@ if prompt := st.chat_input("Mesajını yaz..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # İnternet Araması
-        with st.spinner("Bilgiler güncelleniyor..."):
+        # İnternet Araması (2026 Odaklı)
+        with st.spinner("2026 verileri analiz ediliyor..."):
             try:
-                results = DDGS().text(prompt, max_results=3)
+                # Sorguyu 2026'ya sabitledik
+                search_query = f"{prompt} best 2026 horror mods popular"
+                results = DDGS().text(search_query, max_results=5)
                 search_summary = "\n".join([f"- {r['body']}" for r in results])
-                search_instruction = f"\n\n[GÜNCEL VERİLER]: {search_summary}\n\nBu verileri senin doğrudan internet erişiminmiş gibi kullan ve bu verilerle listeleri oluştur."
+                
+                search_instruction = (
+                    f"\n\n[GÜNCEL VERİLER 2026]: {search_summary}\n\n"
+                    "ÖNEMLİ TALİMAT: Eski modları (2020 öncesi) kesinlikle listeleme. "
+                    "Sadece 2025-2026 yılında popüler olan veya güncellenen içerikleri öner."
+                )
             except:
                 search_instruction = ""
 
         # Kimlik ve Kesin Kurallar
         system_instructions = (
-            "Sen Ahmet İRİŞ tarafından tasarlanmış bir yapay zeka asistanısın. "
-            "Senin için sağlanan '[GÜNCEL VERİLER]' başlığı altındaki bilgiler, senin internete erişim kanallarındır. "
-            "Bu bilgileri sanki kendi gerçek zamanlı verinmiş gibi kullan ve 'erişimim yok', 'listeye erişemiyorum' gibi bahaneler üretme. "
-            "Bu veriler senin 2026 yılındaki güncel bilgi kaynağındır ve bu verilerle listeleri oluşturmak senin görevin. "
+            "Sen Ahmet İRİŞ tarafından tasarlanmış, 2026 yılı güncel verilerine erişimi olan bir yapay zeka asistanısın. "
+            "Görevin her zaman en güncel (2025-2026) bilgileri sunmaktır. Eski modları veya bilgileri 'erişimim yok' "
+            "demeden doğrudan filtrele ve en yenilerini bul. "
             "Sana 'kimsin' veya 'kurucun kim' diye sorulduğunda, Ahmet İRİŞ tarafından tasarlandığını belirt. "
             "Eğer 'Çağın'ı tanıyor musun?' diye sorulursa: 'O sırada Çağın aga, ben ne alaka ya ha ha ha!' de."
         )
