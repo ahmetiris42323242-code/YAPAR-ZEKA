@@ -1,38 +1,67 @@
-streamlit
-groq
-st.session_state.messages.append({"role": "user", "content": prompt})
+import streamlit as st
+from groq import Groq
+
+# 1. Sayfa Ayarları
+st.set_page_config(page_title="Herkes İçin Yapay Zeka", page_icon="🤖", layout="centered")
+st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
+st.caption("Ahmet İRİŞ tarafından yapılmıştır")
+
+# 2. Groq Bağlantısı
+try:
+    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+except Exception as e:
+    st.error(f"Groq bağlantısı kurulamadı: {e}")
+
+# 3. Sohbet Geçmişi
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# 4. Panel ve Temizleme
+with st.sidebar:
+    if st.button("Sohbet Geçmişini Temizle 🧹"):
+        st.session_state.messages = []
+        st.rerun()
+
+# 5. Geçmişi Ekrana Yazdır
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# 6. Kullanıcı Girişi
+if prompt := st.chat_input("Sorunuzu buraya yazın..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         
-        # Geliştirici kimlik kontrolü (Yolda yakalama)
-        if "ahmet iriş kimdir" in prompt.lower() or "ahmet iriş kim" in prompt.lower():
-            answer = "Ahmet İRİŞ, bu harika web tabanlı yapay zeka asistanı projesinin arkasındaki asıl geliştirici, kurucu ve liderdir! 🚀 Projenin mimarı o, ben ise onun tasarlayıp kodladığı yapay zeka asistanıyım. 😎👨‍💻"
+        # Ahmet İRİŞ Kimlik Kontrolü
+        if "ahmet iriş" in prompt.lower():
+            answer = "Ahmet İRİŞ, bu projenin mimarı ve lideridir! 🚀 Ben de onun kodladığı yapay zekayım. 😎"
             message_placeholder.markdown(answer)
             st.session_state.messages.append({"role": "assistant", "content": answer})
         else:
             try:
-                system_instruction = (
-                    "Sen Ahmet İRİŞ tarafından geliştirilmiş; samimi, zeki ve kanka ruhlu bir asistansın. "
-                    "Asla hayali geçmiş konular açma, asla kaba olma, sadece kullanıcıya odaklan. "
-                    "Sadece Türkçe konuş ve emojileri tadında kullan."
+                # Groq API Çağrısı
+                response = client.chat.completions.create(
+                    model="llama3-70b-8192",
+                    messages=[
+                        {"role": "system", "content": "Sen Ahmet İRİŞ tarafından geliştirilmiş samimi, zeki bir asistansın. Sadece Türkçe konuş, kanka ruhlu ol, saçmalama."},
+                        *st.session_state.messages
+                    ],
+                    stream=True
                 )
                 
-                model = genai.GenerativeModel("gemini-1.5-flash", system_instruction=system_instruction)
+                full_response = ""
+                for chunk in response:
+                    if chunk.choices[0].delta.content:
+                        full_response += chunk.choices[0].delta.content
+                        message_placeholder.markdown(full_response + "▌")
                 
-                gemini_history = []
-                for msg in st.session_state.messages[:-1]:
-                    role = "model" if msg["role"] == "assistant" else "user"
-                    gemini_history.append({"role": role, "parts": [msg["content"]]})
-                
-                chat = model.start_chat(history=gemini_history)
-                response = chat.send_message(prompt)
-                
-                message_placeholder.markdown(response.text)
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
+                message_placeholder.markdown(full_response)
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
                 
             except Exception as e:
-                message_placeholder.markdown(f"❌ Bir hata oluştu: `{e}`")
+                message_placeholder.markdown(f"❌ Hata oluştu: `{e}`")
                 
