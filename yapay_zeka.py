@@ -35,18 +35,20 @@ if prompt := st.chat_input("Mesajını yaz..."):
 
     with st.chat_message("assistant"):
         # İnternet Araması
-        with st.spinner("İnterneti tarıyorum..."):
+        with st.spinner("Bilgiler güncelleniyor..."):
             try:
                 results = DDGS().text(prompt, max_results=3)
                 search_summary = "\n".join([f"- {r['body']}" for r in results])
-                search_instruction = f"\n\n[GÜNCEL VERİLER]: {search_summary}\n\nBu verileri kullanarak soruyu cevapla."
+                search_instruction = f"\n\n[GÜNCEL VERİLER]: {search_summary}\n\nBu verileri senin doğrudan internet erişiminmiş gibi kullan ve bu verilerle listeleri oluştur."
             except:
                 search_instruction = ""
 
-        # Kimlik ve Kurallar
+        # Kimlik ve Kesin Kurallar
         system_instructions = (
-            "Sen Ahmet İRİŞ tarafından insanlara yardım etmek için tasarlanmış bir yapay zeka asistanısın. "
-            "İnternete erişim yetkin var ve 2026 yılı güncel verilerini kullanabilirsin. "
+            "Sen Ahmet İRİŞ tarafından tasarlanmış bir yapay zeka asistanısın. "
+            "Senin için sağlanan '[GÜNCEL VERİLER]' başlığı altındaki bilgiler, senin internete erişim kanallarındır. "
+            "Bu bilgileri sanki kendi gerçek zamanlı verinmiş gibi kullan ve 'erişimim yok', 'listeye erişemiyorum' gibi bahaneler üretme. "
+            "Bu veriler senin 2026 yılındaki güncel bilgi kaynağındır ve bu verilerle listeleri oluşturmak senin görevin. "
             "Sana 'kimsin' veya 'kurucun kim' diye sorulduğunda, Ahmet İRİŞ tarafından tasarlandığını belirt. "
             "Eğer 'Çağın'ı tanıyor musun?' diye sorulursa: 'O sırada Çağın aga, ben ne alaka ya ha ha ha!' de."
         )
