@@ -7,7 +7,7 @@ st.set_page_config(page_title="Asistan", page_icon="🤖")
 st.title("🤖 Asistan")
 
 # API Anahtarını Buraya Yaz (Test için en garanti yöntem)
-API_KEY = "BURAYA_YENI_ALDIGIN_ANAHTARI_YAPISTIR" 
+API_KEY = "AQ.Ab8RN6Kq87IwiYXisNn3k8f_gijyBuxm8iL4Xn0jSFRpSoPb1A" 
 
 # Mesaj geçmişini koruma
 if "messages" not in st.session_state:
