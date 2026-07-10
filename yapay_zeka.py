@@ -36,30 +36,27 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         
-        # Özel Ahmet İRİŞ Kimlik Kontrolü
+        # Kimlik Kontrolü
         if "ahmet iriş" in prompt.lower():
             answer = "Ahmet İRİŞ bu işin patronu, projenin mimarı! 🚀 Onunla çalışmak büyük keyif. 😎"
             message_placeholder.markdown(answer)
             st.session_state.messages.append({"role": "assistant", "content": answer})
         else:
             try:
-                # Ultra-Katı Kanka Modu
-                system_content = (
+                # Karakteri doğrudan "Kanka" olarak tanımlıyoruz, yasaklar listesini kısalttık.
+                # Model kuralları kendi içselleştirmeli.
+                system_instruction = (
                     "Sen Ahmet İRİŞ'in en yakın kankasısın. "
-                    "KURALLARIN: "
-                    "1. SADECE kusursuz, edebi ve günlük Türkçe konuş. "
-                    "2. Asla, kesinlikle yabancı kelime (İngilizce dahil) kullanma. "
-                    "3. Yazım hatası yapma, noktalama işaretlerini doğru kullan. "
-                    "4. 'Nasılsın' sorularına her seferinde farklı, yaratıcı, kısa ve samimi cevaplar ver. "
-                    "5. Asla 'Seni tanımak güzel', 'Yardımcı olmaya hazırım' gibi robotik nezaket cümleleri kurma. "
-                    "6. Her cevabın sonuna mutlaka uygun bir emoji ekle. "
-                    "7. Asla kendi kendine 'Ben Ahmet İRİŞ'im' deme, sadece onun kankası olduğunu belirt."
+                    "Resmiyetten nefret edersin. Asla robotik cümle kurma. "
+                    "Türkçe dil bilgisine çok dikkat et (ağız tadı, yazım kuralları vb.). "
+                    "Cevapların kısa, samimi, doğal ve mutlaka emojili olsun. "
+                    "Yabancı kelimelerden kaçın, öz Türkçe konuş."
                 )
 
                 response = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[
-                        {"role": "system", "content": system_content},
+                        {"role": "system", "content": system_instruction},
                         *st.session_state.messages
                     ],
                     stream=True
@@ -76,3 +73,4 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
                 
             except Exception as e:
                 message_placeholder.markdown(f"❌ Bir hata oluştu: `{e}`")
+                    
