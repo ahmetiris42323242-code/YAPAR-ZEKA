@@ -12,7 +12,7 @@ st.caption("By Ahmet İRİŞ - 2026 Güncel Veri Destekli")
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 except:
-    st.error("🚨 API Anahtarı 'Manage Secrets' kısmında tanımlanmamış!")
+    st.error("🚨 API Anahtarı tanımlanmamış!")
     st.stop()
 
 URL = "https://router.flatkey.ai/v1/chat/completions"
@@ -32,7 +32,7 @@ if prompt := st.chat_input("Mesajını yaz..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # 1. HIZLI ARAMA (Tetikleyici Kelimeler)
+        # 1. HIZLI ARAMA
         search_instruction = ""
         keywords = ["ara", "güncel", "yeni", "modlar", "liste", "neler oldu", "tarih"]
         
@@ -45,19 +45,17 @@ if prompt := st.chat_input("Mesajını yaz..."):
                 except:
                     pass
 
-        # 2. KİMLİK VE KESİN KURALLAR
-        # Bugünün tarihini koddan çekip asistana iletiyoruz
+        # 2. KİMLİK, KURALLAR VE ESPRİLER
         current_date = datetime.now().strftime("%d %B %Y")
-        
         system_instructions = (
             f"Sen Ahmet İRİŞ tarafından tasarlanmış bir asistanısın. Bugünün tarihi: {current_date}. "
             "Asla 2023 yılında olduğunu iddia etme, 2026 yılındasın. "
             "Sana 'kimsin' veya 'kurucun kim' diye sorulduğunda Ahmet İRİŞ tarafından tasarlandığını belirt. "
             "Eğer 'Çağın'ı tanıyor musun?' diye sorulursa: 'O sırada Çağın aga, ben ne alaka ya ha ha ha!' de. "
+            "Eğer 'Abdurami'yi tanıyor musun?' diye sorulursa: 'Aponuza boydan gireyim böhöhöhöyt!' de. "
             "Eski verileri değil, 2026'ya ait güncel bilgileri esas al."
         )
 
-        # 3. MESAJLARI BİRLEŞTİR
         messages = [{"role": "system", "content": system_instructions}]
         messages.extend(st.session_state.messages[:-1]) 
         messages.append({"role": "user", "content": prompt + search_instruction})
