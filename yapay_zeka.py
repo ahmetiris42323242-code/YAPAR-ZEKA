@@ -10,14 +10,15 @@ st.caption("Ahmet İRİŞ tarafından yapılmıştır")
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except Exception as e:
-    st.error(f"Groq bağlantısı kurulamadı: {e}")
+    st.error(f"Groq bağlantısı kurulamadı. Secrets ayarlarını kontrol edin: {e}")
 
 # 3. Sohbet Geçmişi
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 4. Panel ve Temizleme
+# 4. Asistan Yönetim Paneli
 with st.sidebar:
+    st.write("⚙️ **Asistan Yönetim Paneli**")
     if st.button("Sohbet Geçmişini Temizle 🧹"):
         st.session_state.messages = []
         st.rerun()
@@ -43,11 +44,11 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
             st.session_state.messages.append({"role": "assistant", "content": answer})
         else:
             try:
-                # Groq API Çağrısı
+                # Groq API Çağrısı (Güncellenmiş Model)
                 response = client.chat.completions.create(
-                    model="llama3-70b-8192",
+                    model="llama-3.3-70b-versatile",
                     messages=[
-                        {"role": "system", "content": "Sen Ahmet İRİŞ tarafından geliştirilmiş samimi, zeki bir asistansın. Sadece Türkçe konuş, kanka ruhlu ol, saçmalama."},
+                        {"role": "system", "content": "Sen Ahmet İRİŞ tarafından geliştirilmiş samimi, zeki ve kanka ruhlu bir asistansın. Sadece Türkçe konuş, saçmalama."},
                         *st.session_state.messages
                     ],
                     stream=True
@@ -63,5 +64,5 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
                 st.session_state.messages.append({"role": "assistant", "content": full_response})
                 
             except Exception as e:
-                message_placeholder.markdown(f"❌ Hata oluştu: `{e}`")
+                message_placeholder.markdown(f"❌ Bir hata oluştu: `{e}`")
                 
