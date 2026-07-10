@@ -6,19 +6,23 @@ from datetime import datetime
 from gtts import gTTS
 import os
 
-# --- KAYDIRMA SORUNUNU ÇÖZEN HİLE ---
+# --- KAYDIRMA SORUNUNU ÇÖZEN JS HİLESİ ---
 st.markdown("""
     <script>
-        var scroll_pos = 0;
-        window.onscroll = function() {scroll_pos = window.scrollY;};
-        window.onload = function() {window.scrollTo(0, scroll_pos);};
+        window.addEventListener('load', function() {
+            var scroll_pos = localStorage.getItem('scroll_pos');
+            if (scroll_pos) window.scrollTo(0, scroll_pos);
+        });
+        window.onscroll = function() {
+            localStorage.setItem('scroll_pos', window.scrollY);
+        };
     </script>
 """, unsafe_allow_html=True)
 
-# --- SENİN ARAYÜZÜN ---
-st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖")
+# --- ARAYÜZ ---
+st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
-st.caption("By Ahmet İRİŞ - 2026 Güncel Veri Destekli")
+st.caption("By Ahmet İRİŞ - 2026 Güncel Veri & Kod Uzmanı")
 
 # --- API AYARLARI ---
 try:
@@ -30,10 +34,10 @@ except:
 URL = "https://router.flatkey.ai/v1/chat/completions"
 headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
-# --- SOHBET ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# --- SOHBET VE SES ---
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -43,48 +47,59 @@ for i, message in enumerate(st.session_state.messages):
                 tts.save(f"cevap_{i}.mp3")
                 st.audio(f"cevap_{i}.mp3")
 
-if prompt := st.chat_input("Mesajını yaz..."):
-    # (Senin mevcut mantığın burada aynı kalıyor)
+# --- MESAJ VE DOSYA GİRİŞİ ---
+col1, col2 = st.columns([0.85, 0.15])
+with col1:
+    prompt = st.chat_input("Mesajını yaz veya dosya/görsel yükle...")
+with col2:
+    uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
+
+# Dosya/Görsel İşleme
+image_data = None
+text_content = ""
+if uploaded_file:
+    if uploaded_file.type.startswith('image'):
+        image_data = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
+    else:
+        text_content = uploaded_file.read().decode("utf-8")
+
+# --- MANTIK ---
+if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
+    
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # 1. HIZLI ARAMA
+        # Arama
         search_instruction = ""
-        keywords = ["ara", "güncel", "yeni", "modlar", "liste", "neler oldu", "tarih"]
-        
-        if any(word in prompt.lower() for word in keywords):
-            with st.spinner("2026 verileri taranıyor..."):
-                try:
-                    results = DDGS().text(f"{prompt} 2026", max_results=3)
-                    search_summary = "\n".join([f"- {r['body']}" for r in results])
-                    search_instruction = f"\n\n[GÜNCEL VERİLER]: {search_summary}"
-                except:
-                    pass
+        if any(w in prompt.lower() for w in ["ara", "güncel", "yeni", "modlar"]):
+            try:
+                results = DDGS().text(f"{prompt} 2026", max_results=2)
+                search_instruction = f"\n\n[GÜNCEL VERİ]: {', '.join([r['body'] for r in results])}"
+            except: pass
 
-        # 2. KİMLİK VE KURALLAR
-        current_date = datetime.now().strftime("%d %B %Y")
+        # Sistem Talimatları
         system_instructions = (
-            f"Sen Ahmet İRİŞ tarafından tasarlanmış bir asistansın. Bugünün tarihi: {current_date}. "
-            "Asla 2023 yılında olduğunu iddia etme, 2026 yılındasın. "
-            "Eğer 'Çağın'ı tanıyor musun?' diye sorulursa: 'O sırada Çağın aga, ben ne alaka ya ha ha ha!' de. "
-            "Eğer 'Abdurami'yi tanıyor musun?' diye sorulursa: 'Aponuza boydan gireyim böhöhöhöyt!' de."
+            "Sen Ahmet İRİŞ tarafından tasarlanmış uzman bir yazılım mühendisisin. "
+            "Her türlü kod diline hakimsin, temiz kod blokları yazarsın. "
+            "Çağın sorulursa: 'O sırada Çağın aga, ben ne alaka ya ha ha ha!' de. "
+            "Abdurami sorulursa: 'Aponuza boydan gireyim böhöhöhöyt!' de."
         )
 
-        messages = [{"role": "system", "content": system_instructions}]
-        messages.extend(st.session_state.messages[:-1]) 
-        messages.append({"role": "user", "content": prompt + search_instruction})
-            
+        msg_content = [{"type": "text", "text": prompt + search_instruction + f"\nDosya: {text_content}"}]
+        if image_data:
+            msg_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}})
+
         try:
-            response = requests.post(URL, headers=headers, json={"model": "gpt-4o", "messages": messages})
+            response = requests.post(URL, headers=headers, json={
+                "model": "gpt-4o", 
+                "messages": [{"role": "system", "content": system_instructions}, {"role": "user", "content": msg_content}]
+            })
             if response.status_code == 200:
                 answer = response.json()['choices'][0]['message']['content']
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
                 st.rerun()
-            else:
-                st.error("API Bağlantı Hatası!")
         except Exception as e:
             st.error(f"Hata: {e}")
-                    
