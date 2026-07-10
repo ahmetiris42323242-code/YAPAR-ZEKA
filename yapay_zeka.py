@@ -34,30 +34,31 @@ if prompt := st.chat_input("Mesajını yaz..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # İnternet Araması Yeteneği
-        with st.spinner("Bilgi toplanıyor..."):
+        # İnternet Araması
+        with st.spinner("İnterneti tarıyorum..."):
             try:
-                # DDGS ile arama yap
-                search_results = DDGS().text(prompt, max_results=3)
-                results_text = "\n\n".join([f"- {r['body']}" for r in search_results])
-                
-                # Talimatlara arama sonuçlarını da ekle
-                context_prompt = f"İşte 2026 yılından güncel internet arama sonuçları:\n{results_text}\n\nBu bilgilere dayanarak kullanıcının sorusunu yanıtla."
-            except Exception as e:
-                context_prompt = "Arama yapılamadı, genel bilginle cevap ver."
+                results = DDGS().text(prompt, max_results=3)
+                search_summary = "\n".join([f"- {r['body']}" for r in results])
+                search_instruction = f"\n\n[GÜNCEL VERİLER]: {search_summary}\n\nBu verileri kullanarak soruyu cevapla."
+            except:
+                search_instruction = ""
 
+        # Kimlik ve Kurallar
         system_instructions = (
             "Sen Ahmet İRİŞ tarafından insanlara yardım etmek için tasarlanmış bir yapay zeka asistanısın. "
-            "Sana 'kimsin' veya 'kurucun kim' diye sorulduğunda, Ahmet İRİŞ tarafından insanlara yardım etmek "
-            "için tasarlandığını belirt. "
-            "Eğer sana 'Çağın'ı tanıyor musun?' diye sorulursa, tam olarak şu cevabı ver: "
-            "'O sırada Çağın aga, ben ne alaka ya ha ha ha!'"
+            "İnternete erişim yetkin var ve 2026 yılı güncel verilerini kullanabilirsin. "
+            "Sana 'kimsin' veya 'kurucun kim' diye sorulduğunda, Ahmet İRİŞ tarafından tasarlandığını belirt. "
+            "Eğer 'Çağın'ı tanıyor musun?' diye sorulursa: 'O sırada Çağın aga, ben ne alaka ya ha ha ha!' de."
         )
 
-        messages = [
-            {"role": "system", "content": system_instructions},
-            {"role": "user", "content": context_prompt + "\n\nKullanıcı sorusu: " + prompt}
-        ]
+        messages = [{"role": "system", "content": system_instructions}]
+        
+        # Geçmişi ekle
+        for m in st.session_state.messages[:-1]:
+            messages.append({"role": m["role"], "content": m["content"]})
+            
+        # Güncel prompt ve arama sonucu
+        messages.append({"role": "user", "content": prompt + search_instruction})
             
         payload = {
             "model": "gpt-4o",
@@ -66,13 +67,11 @@ if prompt := st.chat_input("Mesajını yaz..."):
         
         try:
             response = requests.post(URL, headers=headers, json=payload)
-            
             if response.status_code == 200:
                 answer = response.json()['choices'][0]['message']['content']
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
-                st.error(f"Hata Kodu: {response.status_code}")
-                st.write(response.json())
+                st.error("Bir hata oluştu, lütfen tekrar dene.")
         except Exception as e:
             st.error(f"Bağlantı Hatası: {e}")
