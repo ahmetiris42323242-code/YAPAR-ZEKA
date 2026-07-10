@@ -39,16 +39,23 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
         
         # Ahmet İRİŞ Kimlik Kontrolü
         if "ahmet iriş" in prompt.lower():
-            answer = "Ahmet İRİŞ, bu projenin mimarı ve lideridir! 🚀 Ben de onun kodladığı yapay zekayım. 😎"
+            answer = "Ahmet İRİŞ bu işin patronu, projenin mimarı! 🚀 Onunla çalışmak büyük keyif. 😎"
             message_placeholder.markdown(answer)
             st.session_state.messages.append({"role": "assistant", "content": answer})
         else:
             try:
-                # Groq API Çağrısı (Güncellenmiş Model)
+                # Kanka ruhlu, hatasız ve çeşitli yanıtlar veren sistem talimatı
+                system_content = (
+                    "Sen Ahmet İRİŞ'in geliştirmiş olduğu en yakın kankasısın. "
+                    "Kurallar: 1) Sadece kusursuz Türkçe konuş. 2) Yabancı kelime kullanma. 3) 'Nasılsın' gibi sorulara "
+                    "her seferinde birbirinden farklı, enerjik, samimi ve emojili cevaplar ver. "
+                    "4) Uzun, resmi ve robotik nezaket cümlelerini yasakla. 5) Yazım hatası yapma."
+                )
+
                 response = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[
-                        {"role": "system", "content": "Sen Ahmet İRİŞ tarafından geliştirilmiş samimi, zeki ve kanka ruhlu bir asistansın. Sadece Türkçe konuş, saçmalama."},
+                        {"role": "system", "content": system_content},
                         *st.session_state.messages
                     ],
                     stream=True
@@ -65,4 +72,4 @@ if prompt := st.chat_input("Sorunuzu buraya yazın..."):
                 
             except Exception as e:
                 message_placeholder.markdown(f"❌ Bir hata oluştu: `{e}`")
-                
+    
