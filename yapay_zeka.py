@@ -5,7 +5,7 @@ st.set_page_config(page_title="Asistan", page_icon="🤖")
 st.title("🤖 Asistan")
 
 # API KEY'İ BURAYA DİREKT YAZ (TEST İÇİN)
-API_KEY = "BURAYA_KENDİ_API_KEY'İNİ_YAZ" 
+API_KEY = "AQ.Ab8RN6Kq87IwiYXisNn3k8f_gijyBuxm8iL4Xn0jSFRpSoPb1A" 
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
