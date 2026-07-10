@@ -1,10 +1,11 @@
 import streamlit as st
 import requests
+from duckduckgo_search import DDGS
 
 # --- ARAYÜZ ---
 st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
-st.caption("By Ahmet İRİŞ")
+st.caption("By Ahmet İRİŞ - 2026 Güncel Veri Destekli")
 
 # --- API AYARLARI ---
 try:
@@ -13,7 +14,6 @@ except:
     st.error("🚨 API Anahtarı 'Manage Secrets' kısmında tanımlanmamış!")
     st.stop()
 
-# Flatkey Router URL
 URL = "https://router.flatkey.ai/v1/chat/completions"
 headers = {
     "Authorization": f"Bearer {API_KEY}",
@@ -24,19 +24,28 @@ headers = {
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Mesaj geçmişini ekranda göster
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 if prompt := st.chat_input("Mesajını yaz..."):
-    # Kullanıcı mesajını ekle ve göster
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # Sistem talimatları (Kişilik ve kimlik)
+        # İnternet Araması Yeteneği
+        with st.spinner("Bilgi toplanıyor..."):
+            try:
+                # DDGS ile arama yap
+                search_results = DDGS().text(prompt, max_results=3)
+                results_text = "\n\n".join([f"- {r['body']}" for r in search_results])
+                
+                # Talimatlara arama sonuçlarını da ekle
+                context_prompt = f"İşte 2026 yılından güncel internet arama sonuçları:\n{results_text}\n\nBu bilgilere dayanarak kullanıcının sorusunu yanıtla."
+            except Exception as e:
+                context_prompt = "Arama yapılamadı, genel bilginle cevap ver."
+
         system_instructions = (
             "Sen Ahmet İRİŞ tarafından insanlara yardım etmek için tasarlanmış bir yapay zeka asistanısın. "
             "Sana 'kimsin' veya 'kurucun kim' diye sorulduğunda, Ahmet İRİŞ tarafından insanlara yardım etmek "
@@ -45,10 +54,10 @@ if prompt := st.chat_input("Mesajını yaz..."):
             "'O sırada Çağın aga, ben ne alaka ya ha ha ha!'"
         )
 
-        # Mesajları hazırla
-        messages = [{"role": "system", "content": system_instructions}]
-        for m in st.session_state.messages:
-            messages.append({"role": m["role"], "content": m["content"]})
+        messages = [
+            {"role": "system", "content": system_instructions},
+            {"role": "user", "content": context_prompt + "\n\nKullanıcı sorusu: " + prompt}
+        ]
             
         payload = {
             "model": "gpt-4o",
