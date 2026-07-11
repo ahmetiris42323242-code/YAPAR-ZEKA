@@ -9,7 +9,7 @@ import os
 # --- ARAYÜZ AYARLARI ---
 st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
-st.caption("By Ahmet İRİŞ - 2026 Senior Yazılım Mimarisi Modu")
+st.caption("By Ahmet İRİŞ - 2026 Senior Yazılım Mimarisi Modu | İndirme Özellikli")
 
 # --- API AYARLARI ---
 try:
@@ -30,11 +30,23 @@ def render_chat():
     for i, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+            
+            # --- PROFESYONEL ÖZELLİK: İNDİRME BUTONU ---
             if message["role"] == "assistant":
+                # Seslendirme butonu
                 if st.button("🔊 Sesli Oku", key=f"audio_{i}"):
                     tts = gTTS(text=message["content"], lang='tr')
                     tts.save(f"cevap_{i}.mp3")
                     st.audio(f"cevap_{i}.mp3")
+                
+                # Kod indirme butonu
+                st.download_button(
+                    label="💾 Bu Yanıtı Dosya Olarak İndir",
+                    data=message["content"],
+                    file_name=f"yazilim_cozumu_{i}.txt",
+                    mime="text/plain",
+                    key=f"dl_{i}"
+                )
 
 render_chat()
 
@@ -47,7 +59,6 @@ with col2:
 
 # --- MANTIK ---
 if prompt:
-    # 1. Dosya İşleme
     image_data = None
     text_content = ""
     if uploaded_file:
@@ -57,14 +68,6 @@ if prompt:
             text_content = uploaded_file.read().decode("utf-8")
 
     st.session_state.messages.append({"role": "user", "content": prompt})
-
-    # 2. Hazırlıklar
-    search_instruction = ""
-    if any(w in prompt.lower() for w in ["ara", "güncel", "yeni", "modlar"]):
-        try:
-            results = DDGS().text(f"{prompt} 2026", max_results=2)
-            search_instruction = f"\n\n[GÜNCEL VERİ]: {', '.join([r['body'] for r in results])}"
-        except: pass
 
     # SENİOR MÜHENDİSLİK PROTOKOLÜ VE SİSTEM TALİMATI
     system_instructions = (
@@ -77,12 +80,11 @@ if prompt:
         "5. Kod sorulduğunda önce mantığı (algoritmayı) açıkla, sonra profesyonel standartlarda kodunu sun."
     )
 
-    # 3. API İsteği
     full_messages = [{"role": "system", "content": system_instructions}]
     for msg in st.session_state.messages[:-1]:
         full_messages.append({"role": msg["role"], "content": msg["content"]})
     
-    current_content = [{"type": "text", "text": prompt + search_instruction + f"\nDosya: {text_content}"}]
+    current_content = [{"type": "text", "text": prompt + f"\nDosya: {text_content}"}]
     if image_data:
         current_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}})
     
