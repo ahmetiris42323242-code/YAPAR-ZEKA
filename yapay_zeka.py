@@ -9,11 +9,11 @@ import os
 st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 
-# --- GELİŞTİRİCİ PANELİ ---
+# --- GELİŞTİRİCİ PANELİ VE MODEL MANTIĞI ---
 if "is_dev_mode" not in st.session_state:
     st.session_state.is_dev_mode = False
 if "custom_sys_prompt" not in st.session_state:
-    st.session_state.custom_sys_prompt = "Sen Ahmet İRİŞ tarafından tasarlanmış kıdemli bir yazılım mimarısın."
+    st.session_state.custom_sys_prompt = "Sen Ahmet İRİŞ tarafından tasarlanmış bir asistansın."
 
 with st.sidebar:
     st.subheader("⚙️ Geliştirici Paneli")
@@ -21,24 +21,26 @@ with st.sidebar:
     
     if dev_password == "7536":
         st.session_state.is_dev_mode = True
-        st.success("✅ Geliştirici Modu Aktif")
+        st.success("✅ Geliştirici Modu: SÜPER ZEKA AKTİF")
         st.session_state.custom_sys_prompt = st.text_area("Sistem Talimatlarını Düzenle", st.session_state.custom_sys_prompt)
     elif dev_password != "":
         st.error("❌ Yanlış Şifre!")
+        st.session_state.is_dev_mode = False
     
-    if st.button("Modu Kapat"):
+    if st.button("Modu Kapat (Standart Zeka)"):
         st.session_state.is_dev_mode = False
         st.rerun()
 
-# --- SOHBET MANTIĞI VE GTTS ---
+# --- SOHBET MANTIĞI ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Mesajları göster ve seslendir
 for i, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if msg["role"] == "assistant":
-            if st.button(f"🔊 Sesli Oku {i}", key=f"audio_{i}"):
+            if st.button(f"🔊 Dinle", key=f"audio_{i}"):
                 tts = gTTS(text=msg["content"], lang='tr')
                 tts.save("cevap.mp3")
                 st.audio("cevap.mp3")
@@ -50,7 +52,6 @@ with col2:
     uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
 
 if prompt:
-    # Dosya İşleme
     image_data = None
     text_content = ""
     if uploaded_file:
@@ -65,13 +66,20 @@ if prompt:
     search_results = ""
     try:
         with DDGS() as ddgs:
-            results = list(ddgs.text(prompt, max_results=2))
+            results = list(ddgs.text(prompt, max_results=3))
             search_results = f"\n\nGüncel Bilgi: {results}"
     except:
         search_results = ""
 
-    # MİMARİ MANTIĞI
-    sys_msg = st.session_state.custom_sys_prompt
+    # --- SÜPER ZEKA (DEV MODE) vs STANDART MOD ---
+    if st.session_state.is_dev_mode:
+        model_name = "gpt-4o" # En güçlü model
+        sys_msg = st.session_state.custom_sys_prompt + " (Mod: Süper Zeka - Tam Performans)"
+        temp = 0.05 # Çok düşük sıcaklık, çok yüksek mantık
+    else:
+        model_name = "gpt-4o-mini" # Standart dengeli model
+        sys_msg = "Sen asistan botusun."
+        temp = 0.7 # Yaratıcı ve dengeli
     
     headers = {"Authorization": f"Bearer {st.secrets['GEMINI_API_KEY']}", "Content-Type": "application/json"}
     
@@ -80,9 +88,9 @@ if prompt:
         full_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}})
 
     payload = {
-        "model": "gpt-4o",
+        "model": model_name,
         "messages": [{"role": "system", "content": sys_msg}] + st.session_state.messages[:-1] + [{"role": "user", "content": full_content}],
-        "temperature": 0.2
+        "temperature": temp
     }
     
     try:
