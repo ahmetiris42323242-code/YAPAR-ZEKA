@@ -63,7 +63,7 @@ if prompt:
     # MODEL SEÇİMİ (GPT-4o PRO)
     model_name = "openai/gpt-4o" if st.session_state.is_dev_mode else "meta-llama/llama-3.1-8b-instruct"
     
-    # API İSTEĞİ
+    # API İSTEĞİ (STREAM FALSE - HATASIZ CEVAP)
     headers = {
         "Authorization": f"Bearer {st.secrets['OPENROUTER_API_KEY']}",
         "Content-Type": "application/json"
@@ -72,35 +72,21 @@ if prompt:
     payload = {
         "model": model_name,
         "messages": [{"role": "system", "content": f"Sen Ahmet İRİŞ'in baş mimarısın. Teknik analiz ustasısın. Veri: {search_results}"}, {"role": "user", "content": prompt}],
-        "stream": True 
+        "stream": False 
     }
 
-    # ANLIK AKIŞLI YAZDIRMA
+    # CEVABI TEK SEFERDE YAZDIRMA
     with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        full_response = ""
-        
         try:
-            response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, stream=True)
+            response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
             
-            for line in response.iter_lines():
-                if line:
-                    line_text = line.decode('utf-8')
-                    if line_text.startswith("data: "):
-                        json_str = line_text[6:]
-                        if json_str.strip() == "[DONE]":
-                            break
-                        try:
-                            chunk = json.loads(json_str)
-                            content = chunk['choices'][0]['delta'].get('content', '')
-                            if content:
-                                full_response += content
-                                message_placeholder.markdown(full_response + "▌")
-                        except:
-                            continue
-            
-            message_placeholder.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
-            
+            if response.status_code == 200:
+                answer = response.json()['choices'][0]['message']['content']
+                st.markdown(answer)
+                st.session_state.messages.append({"role": "assistant", "content": answer})
+            else:
+                st.error(f"API Hatası: {response.status_code}")
+                
         except Exception as e:
             st.error(f"Bağlantı Hatası: {e}")
+    
