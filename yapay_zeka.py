@@ -5,99 +5,77 @@ from duckduckgo_search import DDGS
 from gtts import gTTS
 import os
 
+# --- KONUM TESPİTİ ---
+def get_user_location():
+    try:
+        # IP tabanlı konum servisi
+        res = requests.get('https://ipinfo.io/')
+        data = res.json()
+        city = data.get('city', 'İstanbul')
+        region = data.get('region', 'Türkiye')
+        return f"{city}, {region}"
+    except:
+        return "Türkiye"
+
 # --- ARAYÜZ AYARLARI ---
 st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 
-# --- GELİŞTİRİCİ PANELİ VE MODEL MANTIĞI ---
+# --- GELİŞTİRİCİ PANELİ ---
 if "is_dev_mode" not in st.session_state:
     st.session_state.is_dev_mode = False
-if "custom_sys_prompt" not in st.session_state:
-    st.session_state.custom_sys_prompt = "Sen Ahmet İRİŞ tarafından tasarlanmış bir asistansın."
 
 with st.sidebar:
     st.subheader("⚙️ Geliştirici Paneli")
-    dev_password = st.text_input("Geliştirici Şifresi", type="password")
-    
-    if dev_password == "7536":
+    if st.text_input("Şifre", type="password") == "7536":
         st.session_state.is_dev_mode = True
-        st.success("✅ Geliştirici Modu: SÜPER ZEKA AKTİF")
-        st.session_state.custom_sys_prompt = st.text_area("Sistem Talimatlarını Düzenle", st.session_state.custom_sys_prompt)
-    elif dev_password != "":
-        st.error("❌ Yanlış Şifre!")
-        st.session_state.is_dev_mode = False
-    
-    if st.button("Modu Kapat (Standart Zeka)"):
-        st.session_state.is_dev_mode = False
-        st.rerun()
+        st.success("SÜPER ZEKA AKTİF")
 
 # --- SOHBET MANTIĞI ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Mesajları göster ve seslendir
 for i, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if msg["role"] == "assistant":
             if st.button(f"🔊 Dinle", key=f"audio_{i}"):
-                tts = gTTS(text=msg["content"], lang='tr')
-                tts.save("cevap.mp3")
+                gTTS(text=msg["content"], lang='tr').save("cevap.mp3")
                 st.audio("cevap.mp3")
 
-col1, col2 = st.columns([0.9, 0.1])
-with col1:
-    prompt = st.chat_input("Mesajını yaz...")
-with col2:
-    uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
-
-if prompt:
-    image_data = None
-    text_content = ""
-    if uploaded_file:
-        if uploaded_file.type.startswith('image'):
-            image_data = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
-        else:
-            text_content = uploaded_file.read().decode("utf-8")
-
+if prompt := st.chat_input("Mesajını yaz..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
-
-    # ARAMA ÖZELLİĞİ
+    
+    # KONUM VE ARAMA ENTEGRASYONU
+    user_loc = get_user_location()
+    search_query = f"{prompt} konum: {user_loc}"
+    
     search_results = ""
     try:
         with DDGS() as ddgs:
-            results = list(ddgs.text(prompt, max_results=3))
-            search_results = f"\n\nGüncel Bilgi: {results}"
+            # Köfteci vb. aramalar için yerel bazlı sorgu
+            results = list(ddgs.text(search_query, max_results=3))
+            search_results = f"\n\nKonum: {user_loc}. İnternet sonuçları: {results}"
     except:
-        search_results = ""
+        pass
 
-    # --- SÜPER ZEKA (DEV MODE) vs STANDART MOD ---
+    # MODEL SEÇİMİ
     if st.session_state.is_dev_mode:
-        model_name = "gpt-4o" # En güçlü model
-        sys_msg = st.session_state.custom_sys_prompt + " (Mod: Süper Zeka - Tam Performans)"
-        temp = 0.05 # Çok düşük sıcaklık, çok yüksek mantık
+        model_name, temp = "gpt-4o", 0.05
     else:
-        model_name = "gpt-4o-mini" # Standart dengeli model
-        sys_msg = "Sen asistan botusun."
-        temp = 0.7 # Yaratıcı ve dengeli
+        model_name, temp = "gpt-4o-mini", 0.7
     
     headers = {"Authorization": f"Bearer {st.secrets['GEMINI_API_KEY']}", "Content-Type": "application/json"}
-    
-    full_content = [{"type": "text", "text": prompt + f"\nDosya: {text_content}" + search_results}]
-    if image_data:
-        full_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}})
-
     payload = {
         "model": model_name,
-        "messages": [{"role": "system", "content": sys_msg}] + st.session_state.messages[:-1] + [{"role": "user", "content": full_content}],
+        "messages": [{"role": "system", "content": f"Sen {user_loc} bölgesindeki en iyi mekanları bilen bir asistansın."}] + 
+                    st.session_state.messages + [{"role": "system", "content": search_results}],
         "temperature": temp
     }
     
-    try:
-        response = requests.post("https://router.flatkey.ai/v1/chat/completions", headers=headers, json=payload)
-        if response.status_code == 200:
-            answer = response.json()['choices'][0]['message']['content']
-            st.session_state.messages.append({"role": "assistant", "content": answer})
-            st.rerun()
-    except Exception as e:
-        st.error(f"Hata: {e}")
+    response = requests.post("https://router.flatkey.ai/v1/chat/completions", headers=headers, json=payload)
+    if response.status_code == 200:
+        answer = response.json()['choices'][0]['message']['content']
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+        st.rerun()
+        
