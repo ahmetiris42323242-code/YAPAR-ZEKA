@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-import base64
+import json
 from duckduckgo_search import DDGS
 from gtts import gTTS
 
@@ -28,7 +28,7 @@ with st.sidebar:
     st.subheader("⚙️ Geliştirici Paneli")
     if st.text_input("Şifre", type="password") == "7536":
         st.session_state.is_dev_mode = True
-        st.success("✅ HIZLI MOD AKTİF")
+        st.success("✅ TURBO AKIŞ AKTİF")
     
     if st.button("Modu Kapat"):
         st.session_state.is_dev_mode = False
@@ -38,26 +38,19 @@ with st.sidebar:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-for i, msg in enumerate(st.session_state.messages):
+for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
-        if msg["role"] == "assistant":
-            if st.button(f"🔊 Dinle", key=f"audio_{i}"):
-                tts = gTTS(text=msg["content"], lang='tr')
-                tts.save("cevap.mp3")
-                st.audio("cevap.mp3")
 
 # --- GİRDİ ALANI ---
-col1, col2 = st.columns([0.9, 0.1])
-with col1:
-    prompt = st.chat_input("Mesajını yaz...")
-with col2:
-    uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
+prompt = st.chat_input("Kodunu veya sorunu yaz...")
 
 if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-    # ARAMA VE KONUM (Hız için 1 sonuç)
+    # ARAMA
     user_loc = get_user_location()
     search_results = ""
     try:
@@ -65,43 +58,42 @@ if prompt:
             results = list(ddgs.text(f"{prompt} konum: {user_loc}", max_results=1))
             search_results = str(results)
     except:
-        search_results = "İnternet araması yapılamadı."
+        search_results = "İnternet verisi alınamadı."
 
-    # MODEL MANTIĞI (Hız için Qwen 2.5 7B)
-    if st.session_state.is_dev_mode:
-        model_name = "qwen/qwen-2.5-7b-instruct" 
-        sys_msg = "Sen Ahmet İRİŞ'in baş mimarısın. Kod odaklı, hızlı ve teknik cevaplar ver."
-        temp = 0.1
-    else:
-        model_name = "meta-llama/llama-3.1-8b-instruct"
-        sys_msg = "Sen asistan botusun."
-        temp = 0.7
+    # MODEL SEÇİMİ (Groq destekli Llama-3-8B en hızlısıdır)
+    model_name = "meta-llama/llama-3-8b-instruct:free" if st.session_state.is_dev_mode else "meta-llama/llama-3.1-8b-instruct"
     
-    # API İSTEĞİ (Karakter uyumlu başlıklar)
+    # AKIŞLI API İSTEĞİ
     headers = {
         "Authorization": f"Bearer {st.secrets['OPENROUTER_API_KEY']}",
-        "HTTP-Referer": "https://ahmet-iris-asistan.streamlit.app/",
-        "X-Title": "Ahmet IRIS Asistan",
         "Content-Type": "application/json"
     }
     
     payload = {
         "model": model_name,
-        "messages": [
-            {"role": "system", "content": f"{sys_msg}\nGüncel Veri: {search_results}"},
-            {"role": "user", "content": prompt}
-        ],
-        "temperature": temp
+        "messages": [{"role": "system", "content": f"Kısa, teknik ve hızlı cevap ver. Veri: {search_results}"}, {"role": "user", "content": prompt}],
+        "stream": True # AKIŞI AKTİF ETTİK
     }
-    
-    try:
-        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
-        if response.status_code == 200:
-            answer = response.json()['choices'][0]['message']['content']
-            st.session_state.messages.append({"role": "assistant", "content": answer})
-            st.rerun()
-        else:
-            st.error(f"API Hatası: {response.status_code}")
-    except Exception as e:
-        st.error(f"Bağlantı Hatası: {e}")
-    
+
+    # CEVABI ANLIK YAZDIRMA (STREAMING)
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        full_response = ""
+        
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, stream=True)
+        
+        for line in response.iter_lines():
+            if line:
+                decoded_line = line.decode('utf-8').replace('data: ', '')
+                if decoded_line != "[DONE]":
+                    try:
+                        chunk = json.loads(decoded_line)
+                        content = chunk['choices'][0]['delta'].get('content', '')
+                        full_response += content
+                        message_placeholder.markdown(full_response + "▌")
+                    except:
+                        pass
+        
+        message_placeholder.markdown(full_response)
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
+                        
