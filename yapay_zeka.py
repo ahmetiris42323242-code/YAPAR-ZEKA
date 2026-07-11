@@ -25,16 +25,21 @@ if "messages" not in st.session_state: st.session_state.messages = []
 
 with st.sidebar:
     st.subheader("⚙️ Geliştirici Paneli")
-    if st.text_input("Şifre", type="password") == "7536": st.session_state.is_dev_mode = True
-    if st.button("Modu Kapat"): st.session_state.is_dev_mode = False
+    if st.text_input("Şifre", type="password") == "7536": 
+        st.session_state.is_dev_mode = True
+        st.success("✅ SÜPER ZEKA AKTİF")
+    if st.button("Modu Kapat"): 
+        st.session_state.is_dev_mode = False
+        st.rerun()
 
 # --- SOHBET GÖSTERİMİ ---
 for i, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
-        if msg["role"] == "assistant" and st.button(f"🔊 Dinle", key=f"audio_{i}"):
-            gTTS(text=msg["content"], lang='tr').save("cevap.mp3")
-            st.audio("cevap.mp3")
+        if msg["role"] == "assistant":
+            if st.button(f"🔊 Dinle", key=f"audio_{i}"):
+                gTTS(text=msg["content"], lang='tr').save("cevap.mp3")
+                st.audio("cevap.mp3")
 
 # --- GİRDİ VE İŞLEME ---
 col1, col2 = st.columns([0.9, 0.1])
@@ -42,7 +47,7 @@ with col1: prompt = st.chat_input("Mesajını yaz...")
 with col2: uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'png'], label_visibility="collapsed")
 
 if prompt:
-    file_info = f"\n[Dosya İçeriği: {uploaded_file.name}]" if uploaded_file else ""
+    file_info = f"\n[Dosya: {uploaded_file.name}]" if uploaded_file else ""
     st.session_state.messages.append({"role": "user", "content": prompt + file_info})
     
     # Arama
@@ -50,11 +55,11 @@ if prompt:
     try:
         with DDGS() as ddgs:
             results = list(ddgs.text(f"{prompt} konum: {user_loc}", max_results=2))
-            search_context = f"\n\nGüncel Bilgi ({user_loc}): {results}"
+            search_context = f"\n\n🔍 Güncel Bilgi ({user_loc}): {results}"
     except:
         search_context = ""
 
-    # API İSTEĞİ (KURUCU TANIMLI)
+    # API İSTEĞİ (KURUCU VE ESTETİK TANIMLI)
     model = "gpt-4o" if st.session_state.is_dev_mode else "gpt-4o-mini"
     headers = {"Authorization": f"Bearer {st.secrets['GEMINI_API_KEY']}", "Content-Type": "application/json"}
     
@@ -63,6 +68,7 @@ if prompt:
     Seni o tasarladı ve geliştirdi. Sana 'Ahmet İRİŞ kimdir?' diye sorulduğunda 
     onun senin kurucun ve baş mimarın olduğunu gururla belirt.
     Projelerini (Cerberus, Arduino, Hot Wheels, oyun modifikasyonları) bilirsin.
+    Cevaplarında uygun emojiler kullan, profesyonel ve teknik bir dil benimse.
     {search_context}"""
     
     payload = {
@@ -78,7 +84,6 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": answer})
             st.rerun()
         else:
-            st.error("API Bağlantı Hatası!")
+            st.error("⚠️ API Bağlantı Hatası!")
     except Exception as e:
-        st.error(f"Hata: {e}")
-        
+        st.error(f"❌ Hata: {e}")
