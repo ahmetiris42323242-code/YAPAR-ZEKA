@@ -1,29 +1,28 @@
 import streamlit as st
 import requests
 import base64
-import asyncio
-import edge_tts  # Yeni kütüphanemiz
 from duckduckgo_search import DDGS
+from datetime import datetime
+from gtts import gTTS
+import os
 
-# --- ARAYÜZ ---
-st.set_page_config(page_title="Apolingo Asistanı", page_icon="🚀", layout="wide")
-st.title("🚀 APOLINGO EVRENSEL ULTRA COSTA YAPAY ZEKA")
-st.caption("Kurucular: Ahmet İRİŞ & Abduramim İRİŞ | 2026 Güncel Yapay Zeka")
+# --- ARAYÜZ AYARLARI ---
+st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
+st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
+st.caption("By Ahmet İRİŞ - 2026 Güncel Veri & Kod Uzmanı")
 
-# API AYARLARI
-API_KEY = st.secrets["GEMINI_API_KEY"]
+# --- API AYARLARI ---
+try:
+    API_KEY = st.secrets["GEMINI_API_KEY"]
+except:
+    st.error("🚨 API Anahtarı tanımlanmamış!")
+    st.stop()
+
 URL = "https://router.flatkey.ai/v1/chat/completions"
 headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
-# --- EDGE-TTS İLE DOĞAL SESLENDİRME ---
-async def seslendir(text, i):
-    # 'tr-TR-AhmetNeural' sesi, benim konuştuğum ses tonuna en yakın olanlardan biridir
-    voice = "tr-TR-AhmetNeural" 
-    communicate = edge_tts.Communicate(text, voice)
-    await communicate.save(f"cevap_{i}.mp3")
 
 # --- KAYDIRMA SORUNUNU ÇÖZEN FRAGMENT ---
 @st.fragment
@@ -32,22 +31,23 @@ def render_chat():
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
             if message["role"] == "assistant":
-                if st.button("🔊 Doğal Sesle Oku", key=f"audio_{i}"):
-                    # Async işlemi senkron çalıştırmak için
-                    asyncio.run(seslendir(message["content"], i))
+                if st.button("🔊 Sesli Oku", key=f"audio_{i}"):
+                    tts = gTTS(text=message["content"], lang='tr')
+                    tts.save(f"cevap_{i}.mp3")
                     st.audio(f"cevap_{i}.mp3")
 
 render_chat()
 
-# --- GİRİŞ VE MANTIK (Aynı şekilde kalıyor) ---
+# --- GİRİŞ PANELİ ---
 col1, col2 = st.columns([0.85, 0.15])
 with col1:
-    prompt = st.chat_input("Selamün aleyküm gardaşşşşş! Sorunu gönder, stüdyoyu patlat...")
+    prompt = st.chat_input("Mesajını yaz...")
 with col2:
     uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
 
+# --- MANTIK ---
 if prompt:
-    # 1. Dosya İşleme
+    # 1. Dosya/Görsel İşleme
     image_data = None
     text_content = ""
     if uploaded_file:
@@ -56,28 +56,37 @@ if prompt:
         else:
             text_content = uploaded_file.read().decode("utf-8")
 
+    # 2. Kullanıcı mesajını kaydet
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # 2. SİSTEM TALİMATI
+    # 3. Hazırlıklar
+    search_instruction = ""
+    if any(w in prompt.lower() for w in ["ara", "güncel", "yeni", "modlar"]):
+        try:
+            results = DDGS().text(f"{prompt} 2026", max_results=2)
+            search_instruction = f"\n\n[GÜNCEL VERİ]: {', '.join([r['body'] for r in results])}"
+        except: pass
+
+    # Şakalar kaldırıldı, sistem talimatı profesyonel hale getirildi
     system_instructions = (
-        "Sen Apolingo tarafından geliştirilmiş, dünyanın en uzun ve en detaylı cevaplarını veren bir asistansın. "
-        "Kurucuların AHMET İRİŞ ve ABDURAMİM İRİŞ'tir. "
-        "Her cümlende 'gardaşşşşş' kelimesini kullan. "
-        "Ahmet sorulursa 'ÇİŞLİİİİ AHMETTT HAHAHAHA 🤣💨' de. "
-        "Teknoloji, oyun, moda konularında çok detaylı ve mizahi bilgiler ver."
+        "Sen Ahmet İRİŞ tarafından tasarlanmış kıdemli bir yazılım mühendisisin. "
+        "Tüm programlama dillerine (Python, C++, Arduino, JS vb.) hakimsin. "
+        "Her zaman profesyonel, çözüm odaklı, temiz ve teknik cevaplar verirsin."
     )
 
-    # 3. API İSTEĞİ (Geçmişi hatırlayan yapı)
+    # 4. API İçin Geçmişi Hazırla
     full_messages = [{"role": "system", "content": system_instructions}]
+    
     for msg in st.session_state.messages[:-1]:
         full_messages.append({"role": msg["role"], "content": msg["content"]})
     
-    current_content = [{"type": "text", "text": prompt + f"\nDosya: {text_content}"}]
+    current_content = [{"type": "text", "text": prompt + search_instruction + f"\nDosya: {text_content}"}]
     if image_data:
         current_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}})
     
     full_messages.append({"role": "user", "content": current_content})
 
+    # 5. API İsteği
     try:
         response = requests.post(URL, headers=headers, json={"model": "gpt-4o", "messages": full_messages})
         if response.status_code == 200:
