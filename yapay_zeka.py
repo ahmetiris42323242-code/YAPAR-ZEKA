@@ -67,21 +67,19 @@ if prompt:
             search_instruction = f"\n\n[GÜNCEL VERİ]: {', '.join([r['body'] for r in results])}"
         except: pass
 
+    # Şakalar kaldırıldı, sistem talimatı profesyonel hale getirildi
     system_instructions = (
-        "Sen Ahmet İRİŞ tarafından tasarlanmış uzman bir yazılım mühendisisin. "
-        "Her türlü kod diline hakimsin, temiz kod blokları yazarsın. "
-        "Çağın sorulursa: 'O sırada Çağın aga, ben ne alaka ya ha ha ha!' de. "
-        "Abdurami sorulursa: 'Aponuza boydan gireyim böhöhöhöyt!' de."
+        "Sen Ahmet İRİŞ tarafından tasarlanmış kıdemli bir yazılım mühendisisin. "
+        "Tüm programlama dillerine (Python, C++, Arduino, JS vb.) hakimsin. "
+        "Her zaman profesyonel, çözüm odaklı, temiz ve teknik cevaplar verirsin."
     )
 
-    # 4. API İçin Geçmişi Hazırla (Sohbeti takip etmesi için tüm geçmişi gönderiyoruz)
+    # 4. API İçin Geçmişi Hazırla
     full_messages = [{"role": "system", "content": system_instructions}]
     
-    # Tüm geçmişi ekle
     for msg in st.session_state.messages[:-1]:
         full_messages.append({"role": msg["role"], "content": msg["content"]})
     
-    # Son mesajı (dosya/görsel ile) ekle
     current_content = [{"type": "text", "text": prompt + search_instruction + f"\nDosya: {text_content}"}]
     if image_data:
         current_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}})
