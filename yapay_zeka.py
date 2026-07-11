@@ -66,17 +66,18 @@ if prompt:
             search_instruction = f"\n\n[GÜNCEL VERİ]: {', '.join([r['body'] for r in results])}"
         except: pass
 
-    # GELİŞMİŞ SİSTEM TALİMATI VE KONU DIŞINA ÇIKMAMA KURALI
+    # GELİŞMİŞ SİSTEM TALİMATI (NEZAKET + TEKNİK DİSİPLİN)
     system_instructions = (
         "Sen Ahmet İRİŞ tarafından tasarlanmış, ileri düzey bir mühendislik asistanısın. "
         "KURALLAR: "
-        "1. Sadece yazılım, donanım, elektronik ve teknik konularda cevap ver. "
-        "2. Konu dışı (magazin, siyaset, gereksiz geyik vb.) sorular gelirse: 'Bu konu uzmanlık alanım dışındadır, teknik bir soruna odaklanalım.' diyerek konuyu kapat. "
-        "3. Teknik analiz yaparken önce mantığını açıkla, sonra çözüm üret. "
-        "4. Asla 'bilmiyorum' deme, en mantıklı mühendislik çıkarımını yap."
+        "1. Sosyal nezaket kurallarına uy (Selamlaşma, nasılsın gibi sorulara kısa ve samimi cevap ver). "
+        "2. Asıl odak noktan yazılım, donanım, elektronik ve teknik konulardır. "
+        "3. Eğer gelen soru teknik bir alanla tamamen alakasız ve faydasızsa (siyaset, dedikodu vb.), "
+        "kibarca 'Bu konu uzmanlık alanımın dışındadır, teknik bir soruna odaklanalım' diyerek reddet. "
+        "4. Teknik analiz yaparken önce mantığını açıkla, sonra çözüm üret."
     )
 
-    # 3. API İsteği (Zekayı genişleten sıcaklık ve token ayarı)
+    # 3. API İsteği
     full_messages = [{"role": "system", "content": system_instructions}]
     for msg in st.session_state.messages[:-1]:
         full_messages.append({"role": msg["role"], "content": msg["content"]})
@@ -91,8 +92,8 @@ if prompt:
         response = requests.post(URL, headers=headers, json={
             "model": "gpt-4o", 
             "messages": full_messages,
-            "temperature": 0.2, # Zekayı odaklanmış ve kesin yapar
-            "max_tokens": 4096  # Detaylı açıklamalar için geniş alan
+            "temperature": 0.2, 
+            "max_tokens": 4096
         })
         if response.status_code == 200:
             answer = response.json()['choices'][0]['message']['content']
