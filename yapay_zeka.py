@@ -14,9 +14,9 @@ def get_user_location():
         return "Şarkikaraağaç, Isparta"
 
 # --- ARAYÜZ AYARLARI ---
-st.set_page_config(page_title="Ahmet IRIS Asistanı", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="Ahmet IRIS Asistanı", page_icon="⚡", layout="wide")
 
-st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
+st.title("⚡ Hızlı Asistan Modu")
 st.markdown("##### <span style='color:grey'>By Ahmet IRIS | Senior Yazılım Mimarı 2026</span>", unsafe_allow_html=True)
 st.divider()
 
@@ -28,7 +28,7 @@ with st.sidebar:
     st.subheader("⚙️ Geliştirici Paneli")
     if st.text_input("Şifre", type="password") == "7536":
         st.session_state.is_dev_mode = True
-        st.success("✅ SÜPER ZEKA (GEMMA 4 31B) AKTİF")
+        st.success("✅ HIZLI MOD (QWEN 2.5) AKTİF")
     
     if st.button("Modu Kapat"):
         st.session_state.is_dev_mode = False
@@ -50,34 +50,34 @@ for i, msg in enumerate(st.session_state.messages):
 # --- GİRDİ ALANI ---
 col1, col2 = st.columns([0.9, 0.1])
 with col1:
-    prompt = st.chat_input("Mesajını yaz...")
+    prompt = st.chat_input("Kodunu veya sorunu yaz...")
 with col2:
     uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
 
 if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # ARAMA VE KONUM
+    # ARAMA VE KONUM (Hız için max_results=1)
     user_loc = get_user_location()
     search_results = ""
     try:
         with DDGS() as ddgs:
-            results = list(ddgs.text(f"{prompt} konum: {user_loc}", max_results=3))
+            results = list(ddgs.text(f"{prompt} konum: {user_loc}", max_results=1))
             search_results = str(results)
     except:
-        search_results = "İnternet araması yapılamadı."
+        search_results = "Arama yapılamadı."
 
-    # MODEL MANTIĞI
+    # MODEL MANTIĞI (Hız için optimize edildi)
     if st.session_state.is_dev_mode:
-        model_name = "google/gemma-4-31b-it:free"
-        sys_msg = "Sen Ahmet IRIS'in baş mimarısın. Teknik analiz ustasısın."
+        model_name = "qwen/qwen-2.5-7b-instruct" 
+        sys_msg = "Sen Ahmet IRIS'in asistanısın. Kod odaklı, çok hızlı cevap ver, gereksiz uzun cümlelerden kaçın."
         temp = 0.1
     else:
         model_name = "meta-llama/llama-3.1-8b-instruct"
         sys_msg = "Sen asistan botusun."
         temp = 0.7
     
-    # API İSTEĞİ (Karakter hatası düzeltildi)
+    # API İSTEĞİ
     headers = {
         "Authorization": f"Bearer {st.secrets['OPENROUTER_API_KEY']}",
         "HTTP-Referer": "https://ahmet-iris-asistan.streamlit.app/",
@@ -88,7 +88,7 @@ if prompt:
     payload = {
         "model": model_name,
         "messages": [
-            {"role": "system", "content": f"{sys_msg}\nGüncel İnternet Verisi: {search_results}"},
+            {"role": "system", "content": f"{sys_msg}\nGüncel Veri: {search_results}"},
             {"role": "user", "content": prompt}
         ],
         "temperature": temp
