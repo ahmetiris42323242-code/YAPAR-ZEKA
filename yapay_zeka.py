@@ -42,11 +42,7 @@ with col1: prompt = st.chat_input("Mesajını yaz...")
 with col2: uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'png'], label_visibility="collapsed")
 
 if prompt:
-    # Dosya İşleme
-    file_info = ""
-    if uploaded_file:
-        file_info = f"\n[Dosya İçeriği: {uploaded_file.name}]"
-    
+    file_info = f"\n[Dosya İçeriği: {uploaded_file.name}]" if uploaded_file else ""
     st.session_state.messages.append({"role": "user", "content": prompt + file_info})
     
     # Arama
@@ -58,13 +54,20 @@ if prompt:
     except:
         search_context = ""
 
-    # API İSTEĞİ
+    # API İSTEĞİ (KURUCU TANIMLI)
     model = "gpt-4o" if st.session_state.is_dev_mode else "gpt-4o-mini"
     headers = {"Authorization": f"Bearer {st.secrets['GEMINI_API_KEY']}", "Content-Type": "application/json"}
     
+    system_prompt = f"""Sen Ahmet İRİŞ'in asistanısın. 
+    Ahmet İRİŞ bu projenin kurucusu, sahibi ve Senior Yazılım Mimarıdır. 
+    Seni o tasarladı ve geliştirdi. Sana 'Ahmet İRİŞ kimdir?' diye sorulduğunda 
+    onun senin kurucun ve baş mimarın olduğunu gururla belirt.
+    Projelerini (Cerberus, Arduino, Hot Wheels, oyun modifikasyonları) bilirsin.
+    {search_context}"""
+    
     payload = {
         "model": model,
-        "messages": [{"role": "system", "content": f"Sen Ahmet İRİŞ'in asistanısın. {search_context}"}] + st.session_state.messages,
+        "messages": [{"role": "system", "content": system_prompt}] + st.session_state.messages,
         "temperature": 0.3
     }
     
