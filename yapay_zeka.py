@@ -3,7 +3,6 @@ import requests
 import base64
 from duckduckgo_search import DDGS
 from gtts import gTTS
-import os
 
 # --- KONUM TESPİTİ ---
 def get_user_location():
@@ -15,10 +14,10 @@ def get_user_location():
         return "Şarkikaraağaç, Isparta"
 
 # --- ARAYÜZ AYARLARI ---
-st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="Ahmet IRIS Asistanı", page_icon="🤖", layout="wide")
 
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
-st.markdown("##### <span style='color:grey'>By Ahmet İRİŞ | Senior Yazılım Mimarı 2026</span>", unsafe_allow_html=True)
+st.markdown("##### <span style='color:grey'>By Ahmet IRIS | Senior Yazılım Mimarı 2026</span>", unsafe_allow_html=True)
 st.divider()
 
 # --- GELİŞTİRİCİ PANELİ ---
@@ -48,6 +47,7 @@ for i, msg in enumerate(st.session_state.messages):
                 tts.save("cevap.mp3")
                 st.audio("cevap.mp3")
 
+# --- GİRDİ ALANI ---
 col1, col2 = st.columns([0.9, 0.1])
 with col1:
     prompt = st.chat_input("Mesajını yaz...")
@@ -55,11 +55,6 @@ with col2:
     uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
 
 if prompt:
-    image_data = None
-    if uploaded_file:
-        if uploaded_file.type.startswith('image'):
-            image_data = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
-
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     # ARAMA VE KONUM
@@ -70,23 +65,23 @@ if prompt:
             results = list(ddgs.text(f"{prompt} konum: {user_loc}", max_results=3))
             search_results = str(results)
     except:
-        search_results = "İnternet araması şu an yapılamıyor."
+        search_results = "İnternet araması yapılamadı."
 
-    # MODEL MANTIĞI (OPENROUTER + GEMMA 4 31B)
+    # MODEL MANTIĞI
     if st.session_state.is_dev_mode:
         model_name = "google/gemma-4-31b-it:free"
-        sys_msg = "Sen Ahmet İRİŞ'in baş mimarısın. Gemma 4 31B mimarisi ile teknik analiz yapıyorsun."
+        sys_msg = "Sen Ahmet IRIS'in baş mimarısın. Teknik analiz ustasısın."
         temp = 0.1
     else:
         model_name = "meta-llama/llama-3.1-8b-instruct"
         sys_msg = "Sen asistan botusun."
         temp = 0.7
     
-    # API İSTEĞİ
+    # API İSTEĞİ (Karakter hatası düzeltildi)
     headers = {
         "Authorization": f"Bearer {st.secrets['OPENROUTER_API_KEY']}",
         "HTTP-Referer": "https://ahmet-iris-asistan.streamlit.app/",
-        "X-Title": "Ahmet İRİŞ Asistanı",
+        "X-Title": "Ahmet IRIS Asistan",
         "Content-Type": "application/json"
     }
     
