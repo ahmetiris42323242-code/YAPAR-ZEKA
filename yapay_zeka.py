@@ -1,10 +1,11 @@
 import streamlit as st
 import requests
 import base64
+import asyncio
+import edge_tts  # Yeni kütüphanemiz
 from duckduckgo_search import DDGS
-from gtts import gTTS
 
-# --- ARAYÜZ AYARLARI ---
+# --- ARAYÜZ ---
 st.set_page_config(page_title="Apolingo Asistanı", page_icon="🚀", layout="wide")
 st.title("🚀 APOLINGO EVRENSEL ULTRA COSTA YAPAY ZEKA")
 st.caption("Kurucular: Ahmet İRİŞ & Abduramim İRİŞ | 2026 Güncel Yapay Zeka")
@@ -17,6 +18,13 @@ headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/js
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# --- EDGE-TTS İLE DOĞAL SESLENDİRME ---
+async def seslendir(text, i):
+    # 'tr-TR-AhmetNeural' sesi, benim konuştuğum ses tonuna en yakın olanlardan biridir
+    voice = "tr-TR-AhmetNeural" 
+    communicate = edge_tts.Communicate(text, voice)
+    await communicate.save(f"cevap_{i}.mp3")
+
 # --- KAYDIRMA SORUNUNU ÇÖZEN FRAGMENT ---
 @st.fragment
 def render_chat():
@@ -24,23 +32,22 @@ def render_chat():
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
             if message["role"] == "assistant":
-                if st.button("🔊 Sesli Oku", key=f"audio_{i}"):
-                    tts = gTTS(text=message["content"], lang='tr')
-                    tts.save(f"cevap_{i}.mp3")
+                if st.button("🔊 Doğal Sesle Oku", key=f"audio_{i}"):
+                    # Async işlemi senkron çalıştırmak için
+                    asyncio.run(seslendir(message["content"], i))
                     st.audio(f"cevap_{i}.mp3")
 
 render_chat()
 
-# --- GİRİŞ PANELİ ---
+# --- GİRİŞ VE MANTIK (Aynı şekilde kalıyor) ---
 col1, col2 = st.columns([0.85, 0.15])
 with col1:
     prompt = st.chat_input("Selamün aleyküm gardaşşşşş! Sorunu gönder, stüdyoyu patlat...")
 with col2:
     uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
 
-# --- MANTIK ---
 if prompt:
-    # 1. Dosya/Görsel İşleme
+    # 1. Dosya İşleme
     image_data = None
     text_content = ""
     if uploaded_file:
@@ -51,20 +58,16 @@ if prompt:
 
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # 2. APOLINGO SİSTEM TALİMATI
+    # 2. SİSTEM TALİMATI
     system_instructions = (
-        "Sen Apolingo tarafından geliştirilmiş, dünyanın en uzun ve en detaylı cevaplarını veren, "
-        "samimi, aşırı neşeli ve komik bir asistansın. "
-        "1) Kurucuların ve baş mühendislerin AHMET İRİŞ ve ABDURAMİM İRİŞ'tir. Sana kim olduğunu veya "
-        "seni kimin yaptığını sorarlarsa, bu iki büyük kurucunun ismini gururla ve hürmetle söyleyeceksin. "
-        "2) Her cümlende 'gardaşşşşş' kelimesini mutlaka kullan. "
-        "3) Ahmet ile ilgili bir şey sorulursa 'ÇİŞLİİİİ AHMETTT HAHAHAHA 🤣💨' cevabını ver. "
-        "4) 'Biri bana böyle de derse' denilirse 'dicek' diyerek tamamla. "
-        "5) Teknoloji, oyun, yemek, moda konularında sayfalarca, çok detaylı ve mizahi bilgiler ver. "
-        "6) Asla kısa cevap verme, üşenme, anlatabildiğin kadar anlat."
+        "Sen Apolingo tarafından geliştirilmiş, dünyanın en uzun ve en detaylı cevaplarını veren bir asistansın. "
+        "Kurucuların AHMET İRİŞ ve ABDURAMİM İRİŞ'tir. "
+        "Her cümlende 'gardaşşşşş' kelimesini kullan. "
+        "Ahmet sorulursa 'ÇİŞLİİİİ AHMETTT HAHAHAHA 🤣💨' de. "
+        "Teknoloji, oyun, moda konularında çok detaylı ve mizahi bilgiler ver."
     )
 
-    # 3. API İçin Geçmişi Hazırla
+    # 3. API İSTEĞİ (Geçmişi hatırlayan yapı)
     full_messages = [{"role": "system", "content": system_instructions}]
     for msg in st.session_state.messages[:-1]:
         full_messages.append({"role": msg["role"], "content": msg["content"]})
@@ -75,7 +78,6 @@ if prompt:
     
     full_messages.append({"role": "user", "content": current_content})
 
-    # 4. API İsteği
     try:
         response = requests.post(URL, headers=headers, json={"model": "gpt-4o", "messages": full_messages})
         if response.status_code == 200:
