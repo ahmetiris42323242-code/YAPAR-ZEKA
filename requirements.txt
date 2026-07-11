@@ -2,3 +2,4 @@ gTTS
 streamlit
 requests
 duckduckgo-search
+edge_tts
