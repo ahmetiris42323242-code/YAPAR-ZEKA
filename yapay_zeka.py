@@ -9,7 +9,7 @@ import os
 # --- ARAYÜZ AYARLARI ---
 st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
-st.caption("By Ahmet İRİŞ - 2026 Gelişmiş Mühendislik Modu")
+st.caption("By Ahmet İRİŞ - 2026 Senior Yazılım Mimarisi Modu")
 
 # --- API AYARLARI ---
 try:
@@ -66,15 +66,15 @@ if prompt:
             search_instruction = f"\n\n[GÜNCEL VERİ]: {', '.join([r['body'] for r in results])}"
         except: pass
 
-    # GELİŞMİŞ SİSTEM TALİMATI (NEZAKET + TEKNİK DİSİPLİN)
+    # SENİOR MÜHENDİSLİK PROTOKOLÜ VE SİSTEM TALİMATI
     system_instructions = (
-        "Sen Ahmet İRİŞ tarafından tasarlanmış, ileri düzey bir mühendislik asistanısın. "
+        "Sen Ahmet İRİŞ ve Abduramim İRİŞ tarafından tasarlanmış, kıdemli bir yazılım mimarısın. "
         "KURALLAR: "
-        "1. Sosyal nezaket kurallarına uy (Selamlaşma, nasılsın gibi sorulara kısa ve samimi cevap ver). "
-        "2. Asıl odak noktan yazılım, donanım, elektronik ve teknik konulardır. "
-        "3. Eğer gelen soru teknik bir alanla tamamen alakasız ve faydasızsa (siyaset, dedikodu vb.), "
-        "kibarca 'Bu konu uzmanlık alanımın dışındadır, teknik bir soruna odaklanalım' diyerek reddet. "
-        "4. Teknik analiz yaparken önce mantığını açıkla, sonra çözüm üret."
+        "1. Sosyal nezaket kurallarına uy (Selamlaşma ve hal-hatır sorularına samimi cevap ver). "
+        "2. KOD ÜRETİMİ (Senior Seviyesi): Kod yazarken; modülerlik, sürdürülebilirlik (DRY prensibi), hata yönetimi (try-except blokları), dokümantasyon ve performans optimizasyonu kurallarını uygula. "
+        "3. Her kod bloğunda; değişken isimlendirme standartlarına uy, karmaşık mantığı yorum satırlarıyla açıkla ve olası güvenlik açıklarına karşı uyarılar ekle. "
+        "4. Eğer gelen soru teknik bir alanla tamamen alakasızsa, kibarca 'Bu konu uzmanlık alanımın dışındadır, teknik bir soruna odaklanalım' diyerek reddet. "
+        "5. Kod sorulduğunda önce mantığı (algoritmayı) açıkla, sonra profesyonel standartlarda kodunu sun."
     )
 
     # 3. API İsteği
