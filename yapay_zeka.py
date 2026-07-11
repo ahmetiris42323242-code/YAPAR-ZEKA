@@ -1,69 +1,47 @@
 import streamlit as st
 import requests
 import base64
-import sqlite3
 from duckduckgo_search import DDGS
 from gtts import gTTS
-
-# --- VERİTABANI VE OTANTİKASYON ---
-def init_db():
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS premium_users (device_id TEXT PRIMARY KEY)''')
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# Cihaz ID tespiti - Tarayıcıyı kapatsan da kalıcı olması için daha belirgin bir ID
-device_id = st.context.headers.get("User-Agent", "default_device") + "_user_01"
-
-def check_premium():
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute("SELECT * FROM premium_users WHERE device_id = ?", (device_id,))
-    data = c.fetchone()
-    conn.close()
-    return data is not None
+import os
 
 # --- ARAYÜZ AYARLARI ---
 st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 
-# --- DEBUG PANELİ (Premium'u test etmek için) ---
+# --- GELİŞTİRİCİ PANELİ ---
+if "is_dev_mode" not in st.session_state:
+    st.session_state.is_dev_mode = False
+if "custom_sys_prompt" not in st.session_state:
+    st.session_state.custom_sys_prompt = "Sen Ahmet İRİŞ tarafından tasarlanmış kıdemli bir yazılım mimarısın."
+
 with st.sidebar:
-    st.write("---")
-    if st.button("🗑️ Veritabanını Sıfırla (Premium'u Çıkart)"):
-        conn = sqlite3.connect('users.db')
-        c = conn.cursor()
-        c.execute("DELETE FROM premium_users")
-        conn.commit()
-        conn.close()
+    st.subheader("⚙️ Geliştirici Paneli")
+    dev_password = st.text_input("Geliştirici Şifresi", type="password")
+    
+    if dev_password == "7536":
+        st.session_state.is_dev_mode = True
+        st.success("✅ Geliştirici Modu Aktif")
+        st.session_state.custom_sys_prompt = st.text_area("Sistem Talimatlarını Düzenle", st.session_state.custom_sys_prompt)
+    elif dev_password != "":
+        st.error("❌ Yanlış Şifre!")
+    
+    if st.button("Modu Kapat"):
+        st.session_state.is_dev_mode = False
         st.rerun()
 
-# --- PREMIUM KONTROLÜ ---
-is_premium = check_premium()
-
-if not is_premium:
-    st.info("🚀 Premium'a geçerek 'Süper Zeka' ve internet erişimine sahip olabilirsin. (Yıllık 10 TL)")
-    if st.button("💳 Ödeme Yaptım, Modu Aktifleştir"):
-        conn = sqlite3.connect('users.db')
-        c = conn.cursor()
-        c.execute("INSERT OR IGNORE INTO premium_users VALUES (?)", (device_id,))
-        conn.commit()
-        conn.close()
-        st.success("Premium başarıyla aktifleştirildi!")
-        st.rerun()
-else:
-    st.success("💎 Premium Aktif: Süper Zeka Modu ve İnternet Erişimi Açık")
-
-# --- SOHBET MANTIĞI ---
+# --- SOHBET MANTIĞI VE GTTS ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-for msg in st.session_state.messages:
+for i, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
+        if msg["role"] == "assistant":
+            if st.button(f"🔊 Sesli Oku {i}", key=f"audio_{i}"):
+                tts = gTTS(text=msg["content"], lang='tr')
+                tts.save("cevap.mp3")
+                st.audio("cevap.mp3")
 
 col1, col2 = st.columns([0.9, 0.1])
 with col1:
@@ -72,7 +50,7 @@ with col2:
     uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
 
 if prompt:
-    # (Dosya ve API mantığı aynı şekilde kalıyor...)
+    # Dosya İşleme
     image_data = None
     text_content = ""
     if uploaded_file:
@@ -83,14 +61,35 @@ if prompt:
 
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # Arama ve Model mantığı aynı...
+    # ARAMA ÖZELLİĞİ
     search_results = ""
-    if is_premium:
-        try:
-            with DDGS() as ddgs:
-                results = list(ddgs.text(prompt, max_results=3))
-                search_results = f"\n\nGüncel İnternet Arama Sonuçları: {results}"
-        except:
-            search_results = ""
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(prompt, max_results=2))
+            search_results = f"\n\nGüncel Bilgi: {results}"
+    except:
+        search_results = ""
 
-    # ... (API isteği aynı şekilde aşağıya devam eder)
+    # MİMARİ MANTIĞI
+    sys_msg = st.session_state.custom_sys_prompt
+    
+    headers = {"Authorization": f"Bearer {st.secrets['GEMINI_API_KEY']}", "Content-Type": "application/json"}
+    
+    full_content = [{"type": "text", "text": prompt + f"\nDosya: {text_content}" + search_results}]
+    if image_data:
+        full_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}})
+
+    payload = {
+        "model": "gpt-4o",
+        "messages": [{"role": "system", "content": sys_msg}] + st.session_state.messages[:-1] + [{"role": "user", "content": full_content}],
+        "temperature": 0.2
+    }
+    
+    try:
+        response = requests.post("https://router.flatkey.ai/v1/chat/completions", headers=headers, json=payload)
+        if response.status_code == 200:
+            answer = response.json()['choices'][0]['message']['content']
+            st.session_state.messages.append({"role": "assistant", "content": answer})
+            st.rerun()
+    except Exception as e:
+        st.error(f"Hata: {e}")
