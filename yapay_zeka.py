@@ -6,19 +6,25 @@ from datetime import datetime
 from gtts import gTTS
 import os
 
+# --- ARAYÜZ AYARLARI ---
 st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.caption("By Ahmet İRİŞ - 2026 Güncel Veri & Kod Uzmanı")
 
-# API AYARLARI
-API_KEY = st.secrets["GEMINI_API_KEY"]
+# --- API AYARLARI ---
+try:
+    API_KEY = st.secrets["GEMINI_API_KEY"]
+except:
+    st.error("🚨 API Anahtarı tanımlanmamış!")
+    st.stop()
+
 URL = "https://router.flatkey.ai/v1/chat/completions"
 headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- KAYDIRMA SORUNUNU ÇÖZEN TEK YER ---
+# --- KAYDIRMA SORUNUNU ÇÖZEN FRAGMENT ---
 @st.fragment
 def render_chat():
     for i, message in enumerate(st.session_state.messages):
@@ -30,17 +36,18 @@ def render_chat():
                     tts.save(f"cevap_{i}.mp3")
                     st.audio(f"cevap_{i}.mp3")
 
-render_chat() # Sohbeti burada çağırıyoruz
+render_chat()
 
-# --- MESAJ VE DOSYA GİRİŞİ (Aynı senin yaptığın gibi) ---
+# --- GİRİŞ PANELİ ---
 col1, col2 = st.columns([0.85, 0.15])
 with col1:
     prompt = st.chat_input("Mesajını yaz...")
 with col2:
     uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
 
+# --- MANTIK ---
 if prompt:
-    # Dosya İşleme
+    # 1. Dosya/Görsel İşleme
     image_data = None
     text_content = ""
     if uploaded_file:
@@ -49,25 +56,44 @@ if prompt:
         else:
             text_content = uploaded_file.read().decode("utf-8")
 
+    # 2. Kullanıcı mesajını kaydet
     st.session_state.messages.append({"role": "user", "content": prompt})
-    
-    # API İSTEĞİ (Senin orijinal mantığın)
+
+    # 3. Hazırlıklar
+    search_instruction = ""
+    if any(w in prompt.lower() for w in ["ara", "güncel", "yeni", "modlar"]):
+        try:
+            results = DDGS().text(f"{prompt} 2026", max_results=2)
+            search_instruction = f"\n\n[GÜNCEL VERİ]: {', '.join([r['body'] for r in results])}"
+        except: pass
+
     system_instructions = (
         "Sen Ahmet İRİŞ tarafından tasarlanmış uzman bir yazılım mühendisisin. "
+        "Her türlü kod diline hakimsin, temiz kod blokları yazarsın. "
         "Çağın sorulursa: 'O sırada Çağın aga, ben ne alaka ya ha ha ha!' de. "
         "Abdurami sorulursa: 'Aponuza boydan gireyim böhöhöhöyt!' de."
     )
-    
-    msg_content = [{"type": "text", "text": prompt + f"\nDosya: {text_content}"}]
-    if image_data:
-        msg_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}})
 
-    response = requests.post(URL, headers=headers, json={
-        "model": "gpt-4o", 
-        "messages": [{"role": "system", "content": system_instructions}, {"role": "user", "content": msg_content}]
-    })
+    # 4. API İçin Geçmişi Hazırla (Sohbeti takip etmesi için tüm geçmişi gönderiyoruz)
+    full_messages = [{"role": "system", "content": system_instructions}]
     
-    if response.status_code == 200:
-        answer = response.json()['choices'][0]['message']['content']
-        st.session_state.messages.append({"role": "assistant", "content": answer})
-        st.rerun()
+    # Tüm geçmişi ekle
+    for msg in st.session_state.messages[:-1]:
+        full_messages.append({"role": msg["role"], "content": msg["content"]})
+    
+    # Son mesajı (dosya/görsel ile) ekle
+    current_content = [{"type": "text", "text": prompt + search_instruction + f"\nDosya: {text_content}"}]
+    if image_data:
+        current_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}})
+    
+    full_messages.append({"role": "user", "content": current_content})
+
+    # 5. API İsteği
+    try:
+        response = requests.post(URL, headers=headers, json={"model": "gpt-4o", "messages": full_messages})
+        if response.status_code == 200:
+            answer = response.json()['choices'][0]['message']['content']
+            st.session_state.messages.append({"role": "assistant", "content": answer})
+            st.rerun()
+    except Exception as e:
+        st.error(f"Hata: {e}")
