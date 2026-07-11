@@ -17,7 +17,6 @@ def get_user_location():
 # --- ARAYÜZ AYARLARI ---
 st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
 
-# Başlık ve İmza
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.markdown("##### <span style='color:grey'>By Ahmet İRİŞ | Senior Yazılım Mimarı 2026</span>", unsafe_allow_html=True)
 st.divider()
@@ -30,7 +29,7 @@ with st.sidebar:
     st.subheader("⚙️ Geliştirici Paneli")
     if st.text_input("Şifre", type="password") == "7536":
         st.session_state.is_dev_mode = True
-        st.success("✅ SÜPER ZEKA AKTİF")
+        st.success("✅ SÜPER ZEKA (GEMMA 4 31B) AKTİF")
     
     if st.button("Modu Kapat"):
         st.session_state.is_dev_mode = False
@@ -57,48 +56,56 @@ with col2:
 
 if prompt:
     image_data = None
-    text_content = ""
     if uploaded_file:
         if uploaded_file.type.startswith('image'):
             image_data = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
-        else:
-            text_content = uploaded_file.read().decode("utf-8")
 
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     # ARAMA VE KONUM
     user_loc = get_user_location()
+    search_results = ""
     try:
         with DDGS() as ddgs:
             results = list(ddgs.text(f"{prompt} konum: {user_loc}", max_results=3))
-            search_results = f"\n\nGüncel Bilgi ({user_loc}): {results}"
+            search_results = str(results)
     except:
-        search_results = ""
+        search_results = "İnternet araması şu an yapılamıyor."
 
-    # MODEL MANTIĞI
+    # MODEL MANTIĞI (OPENROUTER + GEMMA 4 31B)
     if st.session_state.is_dev_mode:
-        model_name, temp, sys_msg = "gpt-4o", 0.05, "Sen Ahmet İRİŞ'in Süper Zekasısın. Kusursuz analiz yap."
+        model_name = "google/gemma-4-31b-it:free"
+        sys_msg = "Sen Ahmet İRİŞ'in baş mimarısın. Gemma 4 31B mimarisi ile teknik analiz yapıyorsun."
+        temp = 0.1
     else:
-        model_name, temp, sys_msg = "gpt-4o-mini", 0.7, "Sen asistan botusun."
+        model_name = "meta-llama/llama-3.1-8b-instruct"
+        sys_msg = "Sen asistan botusun."
+        temp = 0.7
     
-    headers = {"Authorization": f"Bearer {st.secrets['GEMINI_API_KEY']}", "Content-Type": "application/json"}
+    # API İSTEĞİ
+    headers = {
+        "Authorization": f"Bearer {st.secrets['OPENROUTER_API_KEY']}",
+        "HTTP-Referer": "https://ahmet-iris-asistan.streamlit.app/",
+        "X-Title": "Ahmet İRİŞ Asistanı",
+        "Content-Type": "application/json"
+    }
     
-    full_content = [{"type": "text", "text": prompt + f"\nDosya: {text_content}" + search_results}]
-    if image_data:
-        full_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}})
-
     payload = {
         "model": model_name,
-        "messages": [{"role": "system", "content": sys_msg}] + st.session_state.messages[:-1] + [{"role": "user", "content": full_content}],
+        "messages": [
+            {"role": "system", "content": f"{sys_msg}\nGüncel İnternet Verisi: {search_results}"},
+            {"role": "user", "content": prompt}
+        ],
         "temperature": temp
     }
     
     try:
-        response = requests.post("https://router.flatkey.ai/v1/chat/completions", headers=headers, json=payload)
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
         if response.status_code == 200:
             answer = response.json()['choices'][0]['message']['content']
             st.session_state.messages.append({"role": "assistant", "content": answer})
             st.rerun()
+        else:
+            st.error(f"API Hatası: {response.status_code}")
     except Exception as e:
-        st.error(f"Hata: {e}")
-        
+        st.error(f"Bağlantı Hatası: {e}")
