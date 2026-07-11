@@ -43,7 +43,7 @@ def render_chat():
                 st.download_button(
                     label="💾 Bu Yanıtı Dosya Olarak İndir",
                     data=message["content"],
-                    file_name=f"yazilim_cozumu_{i}.txt",
+                    file_name=f"yapay_zeka_yanit{i}.txt",
                     mime="text/plain",
                     key=f"dl_{i}"
                 )
