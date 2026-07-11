@@ -9,7 +9,7 @@ import os
 # --- ARAYÜZ AYARLARI ---
 st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
-st.caption("By Ahmet İRİŞ - 2026 Güncel Veri & Kod Uzmanı")
+st.caption("By Ahmet İRİŞ - 2026 Gelişmiş Mühendislik Modu")
 
 # --- API AYARLARI ---
 try:
@@ -47,7 +47,7 @@ with col2:
 
 # --- MANTIK ---
 if prompt:
-    # 1. Dosya/Görsel İşleme
+    # 1. Dosya İşleme
     image_data = None
     text_content = ""
     if uploaded_file:
@@ -56,10 +56,9 @@ if prompt:
         else:
             text_content = uploaded_file.read().decode("utf-8")
 
-    # 2. Kullanıcı mesajını kaydet
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # 3. Hazırlıklar
+    # 2. Hazırlıklar
     search_instruction = ""
     if any(w in prompt.lower() for w in ["ara", "güncel", "yeni", "modlar"]):
         try:
@@ -67,16 +66,18 @@ if prompt:
             search_instruction = f"\n\n[GÜNCEL VERİ]: {', '.join([r['body'] for r in results])}"
         except: pass
 
-    # Şakalar kaldırıldı, sistem talimatı profesyonel hale getirildi
+    # GELİŞMİŞ SİSTEM TALİMATI VE KONU DIŞINA ÇIKMAMA KURALI
     system_instructions = (
-        "Sen Ahmet İRİŞ tarafından tasarlanmış kıdemli bir yazılım mühendisisin. "
-        "Tüm programlama dillerine (Python, C++, Arduino, JS vb.) hakimsin. "
-        "Her zaman profesyonel, çözüm odaklı, temiz ve teknik cevaplar verirsin."
+        "Sen Ahmet İRİŞ tarafından tasarlanmış, ileri düzey bir mühendislik asistanısın. "
+        "KURALLAR: "
+        "1. Sadece yazılım, donanım, elektronik ve teknik konularda cevap ver. "
+        "2. Konu dışı (magazin, siyaset, gereksiz geyik vb.) sorular gelirse: 'Bu konu uzmanlık alanım dışındadır, teknik bir soruna odaklanalım.' diyerek konuyu kapat. "
+        "3. Teknik analiz yaparken önce mantığını açıkla, sonra çözüm üret. "
+        "4. Asla 'bilmiyorum' deme, en mantıklı mühendislik çıkarımını yap."
     )
 
-    # 4. API İçin Geçmişi Hazırla
+    # 3. API İsteği (Zekayı genişleten sıcaklık ve token ayarı)
     full_messages = [{"role": "system", "content": system_instructions}]
-    
     for msg in st.session_state.messages[:-1]:
         full_messages.append({"role": msg["role"], "content": msg["content"]})
     
@@ -86,9 +87,13 @@ if prompt:
     
     full_messages.append({"role": "user", "content": current_content})
 
-    # 5. API İsteği
     try:
-        response = requests.post(URL, headers=headers, json={"model": "gpt-4o", "messages": full_messages})
+        response = requests.post(URL, headers=headers, json={
+            "model": "gpt-4o", 
+            "messages": full_messages,
+            "temperature": 0.2, # Zekayı odaklanmış ve kesin yapar
+            "max_tokens": 4096  # Detaylı açıklamalar için geniş alan
+        })
         if response.status_code == 200:
             answer = response.json()['choices'][0]['message']['content']
             st.session_state.messages.append({"role": "assistant", "content": answer})
