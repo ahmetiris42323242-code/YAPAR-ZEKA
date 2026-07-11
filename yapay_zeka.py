@@ -1,83 +1,71 @@
 import streamlit as st
 import requests
 import base64
-import json
 from duckduckgo_search import DDGS
 from gtts import gTTS
 
-# --- ARAYÜZ AYARLARI ---
-st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
+# --- YARDIMCI FONKSİYONLAR ---
+def get_user_location():
+    try:
+        res = requests.get('https://ipinfo.io/', timeout=2)
+        data = res.json()
+        return f"{data.get('city', 'Isparta')}, {data.get('region', 'Türkiye')}"
+    except:
+        return "Şarkikaraağaç, Isparta"
 
+# --- ARAYÜZ ---
+st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.markdown("##### <span style='color:grey'>By Ahmet İRİŞ | Senior Yazılım Mimarı 2026</span>", unsafe_allow_html=True)
 st.divider()
 
-# --- GELİŞTİRİCİ PANELİ ---
-if "is_dev_mode" not in st.session_state:
-    st.session_state.is_dev_mode = False
+# --- PANEL & DURUM ---
+if "is_dev_mode" not in st.session_state: st.session_state.is_dev_mode = False
+if "messages" not in st.session_state: st.session_state.messages = []
 
 with st.sidebar:
     st.subheader("⚙️ Geliştirici Paneli")
-    if st.text_input("Şifre", type="password") == "7536":
-        st.session_state.is_dev_mode = True
-        st.success("✅ PRO MOD AKTİF")
-    if st.button("Modu Kapat"):
-        st.session_state.is_dev_mode = False
-        st.rerun()
+    if st.text_input("Şifre", type="password") == "7536": st.session_state.is_dev_mode = True
+    if st.button("Modu Kapat"): st.session_state.is_dev_mode = False
 
-# --- SOHBET MANTIĞI ---
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
+# --- SOHBET GÖSTERİMİ ---
 for i, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
-        if msg["role"] == "assistant":
-            if st.button(f"🔊 Dinle", key=f"audio_{i}"):
-                tts = gTTS(text=msg["content"], lang='tr')
-                tts.save("cevap.mp3")
-                st.audio("cevap.mp3")
+        if msg["role"] == "assistant" and st.button(f"🔊 Dinle", key=f"audio_{i}"):
+            gTTS(text=msg["content"], lang='tr').save("cevap.mp3")
+            st.audio("cevap.mp3")
 
+# --- GİRDİ VE İŞLEME ---
 col1, col2 = st.columns([0.9, 0.1])
-with col1:
-    prompt = st.chat_input("Mesajını yaz...")
-with col2:
-    uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'jpeg', 'png'], label_visibility="collapsed")
+with col1: prompt = st.chat_input("Mesajını yaz...")
+with col2: uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'png'], label_visibility="collapsed")
 
 if prompt:
-    # Dosya işleme
-    text_content = ""
-    image_data = None
+    # Dosya İşleme
+    file_info = ""
     if uploaded_file:
-        if uploaded_file.type.startswith('image'):
-            image_data = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
-        else:
-            text_content = uploaded_file.read().decode("utf-8")
-
-    st.session_state.messages.append({"role": "user", "content": prompt})
-
-    # ARAMA
+        file_info = f"\n[Dosya İçeriği: {uploaded_file.name}]"
+    
+    st.session_state.messages.append({"role": "user", "content": prompt + file_info})
+    
+    # Arama
+    user_loc = get_user_location()
     try:
         with DDGS() as ddgs:
-            results = list(ddgs.text(prompt, max_results=1))
-            search_context = f"\n\nGüncel İnternet Bilgisi: {results}"
+            results = list(ddgs.text(f"{prompt} konum: {user_loc}", max_results=2))
+            search_context = f"\n\nGüncel Bilgi ({user_loc}): {results}"
     except:
         search_context = ""
 
-    # MODEL SEÇİMİ
-    model_name = "gpt-4o" if st.session_state.is_dev_mode else "gpt-4o-mini"
+    # API İSTEĞİ
+    model = "gpt-4o" if st.session_state.is_dev_mode else "gpt-4o-mini"
+    headers = {"Authorization": f"Bearer {st.secrets['GEMINI_API_KEY']}", "Content-Type": "application/json"}
     
-    # PAYLOAD HAZIRLAMA
     payload = {
-        "model": model_name,
-        "messages": [{"role": "system", "content": "Sen Ahmet İRİŞ'in asistanısın. Kısa ve net cevap ver."}] + 
-                     [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
+        "model": model,
+        "messages": [{"role": "system", "content": f"Sen Ahmet İRİŞ'in asistanısın. {search_context}"}] + st.session_state.messages,
         "temperature": 0.3
-    }
-    
-    headers = {
-        "Authorization": f"Bearer {st.secrets['GEMINI_API_KEY']}", 
-        "Content-Type": "application/json"
     }
     
     try:
@@ -87,6 +75,7 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": answer})
             st.rerun()
         else:
-            st.error(f"API Hatası ({response.status_code}): {response.text}")
+            st.error("API Bağlantı Hatası!")
     except Exception as e:
-        st.error(f"Bağlantı Hatası: {e}")
+        st.error(f"Hata: {e}")
+        
