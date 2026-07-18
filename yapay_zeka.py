@@ -31,6 +31,14 @@ with st.sidebar:
     if st.button("Modu Kapat"): 
         st.session_state.is_dev_mode = False
         st.rerun()
+    
+    st.markdown("---")
+    st.subheader("🎨 Görsel Oluşturucu")
+    gorsel_prompt = st.text_input("Çizmemi istediğin şeyi yaz:")
+    if st.button("🎨 Oluştur"):
+        if gorsel_prompt:
+            img_url = f"https://pollinations.ai/p/{gorsel_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true"
+            st.image(img_url, caption=gorsel_prompt)
 
 # --- SOHBET GÖSTERİMİ ---
 for i, msg in enumerate(st.session_state.messages):
@@ -59,15 +67,12 @@ if prompt:
     except:
         search_context = ""
 
-    # API İSTEĞİ (KURUCU VE ESTETİK TANIMLI)
     model = "gpt-4o" if st.session_state.is_dev_mode else "gpt-4o-mini"
     headers = {"Authorization": f"Bearer {st.secrets['GEMINI_API_KEY']}", "Content-Type": "application/json"}
     
     system_prompt = f"""Sen Ahmet İRİŞ'in asistanısın. 
     Ahmet İRİŞ bu projenin kurucusu, sahibi ve Senior Yazılım Mimarıdır. 
-    Seni o tasarladı ve geliştirdi. Sana 'Ahmet İRİŞ kimdir?' diye sorulduğunda 
-    onun senin kurucun ve baş mimarın olduğunu gururla belirt.
-    Projelerini (Cerberus, Arduino, Hot Wheels, oyun modifikasyonları) bilirsin.
+    Seni o tasarladı ve geliştirdi. Projelerini (Cerberus, Arduino, Hot Wheels, oyun modifikasyonları) bilirsin.
     Cevaplarında uygun emojiler kullan, profesyonel ve teknik bir dil benimse.
     {search_context}"""
     
@@ -87,3 +92,4 @@ if prompt:
             st.error("⚠️ API Bağlantı Hatası!")
     except Exception as e:
         st.error(f"❌ Hata: {e}")
+                     
