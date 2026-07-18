@@ -14,7 +14,7 @@ def get_user_location():
     except:
         return "Şarkikaraağaç, Isparta"
 
-# --- ARAYÜZ ---
+# --- ARAYÜZ AYARLARI ---
 st.set_page_config(page_title="Ahmet İRİŞ Asistanı", page_icon="🤖", layout="wide")
 st.title("🤖 Web Tabanlı Yapay Zeka Asistanı")
 st.markdown("##### <span style='color:grey'>By Ahmet İRİŞ | Senior Yazılım Mimarı 2026</span>", unsafe_allow_html=True)
@@ -34,15 +34,21 @@ with st.sidebar:
         st.rerun()
     
     st.markdown("---")
-    st.subheader("🎨 Görsel Oluşturucu")
-    g_prompt = st.text_input("Ne çizelim?")
+    st.subheader("🎨 Görsel Atölyesi")
+    g_prompt = st.text_input("Ne çizelim?", key="g_prompt_input")
     if st.button("🎨 Görseli Oluştur"):
         if g_prompt:
-            seed = random.randint(1, 999999)
-            img_url = f"https://pollinations.ai/p/{g_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={seed}"
-            st.image(img_url, caption=f"İsteğin: {g_prompt}")
+            with st.spinner("Mimarınız görseli işliyor..."):
+                seed = random.randint(1, 999999)
+                img_url = f"https://pollinations.ai/p/{g_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={seed}"
+                try:
+                    # Bayt olarak çekip hata payını yok ediyoruz
+                    img_data = requests.get(img_url, timeout=30).content
+                    st.image(img_data, caption=f"'{g_prompt}' için çizim", use_column_width=True)
+                except Exception as e:
+                    st.error("Görsel yüklenemedi!")
         else:
-            st.warning("Lütfen bir şey yaz!")
+            st.warning("Lütfen bir açıklama gir.")
 
 # --- SOHBET GÖSTERİMİ ---
 for i, msg in enumerate(st.session_state.messages):
@@ -95,4 +101,4 @@ if prompt:
             st.error("⚠️ API Bağlantı Hatası!")
     except Exception as e:
         st.error(f"❌ Hata: {e}")
-            
+    
