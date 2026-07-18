@@ -3,6 +3,7 @@ import requests
 import base64
 from duckduckgo_search import DDGS
 from gtts import gTTS
+import random
 
 # --- YARDIMCI FONKSİYONLAR ---
 def get_user_location():
@@ -34,11 +35,14 @@ with st.sidebar:
     
     st.markdown("---")
     st.subheader("🎨 Görsel Oluşturucu")
-    gorsel_prompt = st.text_input("Çizmemi istediğin şeyi yaz:")
-    if st.button("🎨 Oluştur"):
-        if gorsel_prompt:
-            img_url = f"https://pollinations.ai/p/{gorsel_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true"
-            st.image(img_url, caption=gorsel_prompt)
+    g_prompt = st.text_input("Ne çizelim?")
+    if st.button("🎨 Görseli Oluştur"):
+        if g_prompt:
+            seed = random.randint(1, 999999)
+            img_url = f"https://pollinations.ai/p/{g_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={seed}"
+            st.image(img_url, caption=f"İsteğin: {g_prompt}")
+        else:
+            st.warning("Lütfen bir şey yaz!")
 
 # --- SOHBET GÖSTERİMİ ---
 for i, msg in enumerate(st.session_state.messages):
@@ -58,7 +62,6 @@ if prompt:
     file_info = f"\n[Dosya: {uploaded_file.name}]" if uploaded_file else ""
     st.session_state.messages.append({"role": "user", "content": prompt + file_info})
     
-    # Arama
     user_loc = get_user_location()
     try:
         with DDGS() as ddgs:
@@ -92,4 +95,4 @@ if prompt:
             st.error("⚠️ API Bağlantı Hatası!")
     except Exception as e:
         st.error(f"❌ Hata: {e}")
-                     
+            
