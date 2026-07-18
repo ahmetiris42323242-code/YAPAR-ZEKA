@@ -35,14 +35,17 @@ with st.sidebar:
     
     st.markdown("---")
     st.subheader("🎨 Görsel Atölyesi")
-    # FORM KULLANIYORUZ: Bu, asistanın sohbet akışını görselden ayırır.
-    with st.form("gorsel_form"):
+    
+    # Görsel formunu temizlenir hale getirdik
+    with st.form("gorsel_form", clear_on_submit=True):
         g_prompt = st.text_input("Ne çizelim?")
         submitted = st.form_submit_button("🎨 Görseli Oluştur")
-        if submitted and g_prompt:
-            seed = random.randint(1, 999999)
-            img_url = f"https://pollinations.ai/p/{g_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={seed}"
-            st.image(img_url, caption=f"İsteğin: {g_prompt}")
+    
+    # Form tetiklendiğinde görseli göster
+    if submitted and g_prompt:
+        seed = random.randint(1, 999999)
+        img_url = f"https://pollinations.ai/p/{g_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={seed}"
+        st.image(img_url, caption=f"İsteğin: {g_prompt}")
 
 # --- SOHBET GÖSTERİMİ ---
 for i, msg in enumerate(st.session_state.messages):
@@ -95,3 +98,4 @@ if prompt:
             st.error("⚠️ API Bağlantı Hatası!")
     except Exception as e:
         st.error(f"❌ Hata: {e}")
+            
