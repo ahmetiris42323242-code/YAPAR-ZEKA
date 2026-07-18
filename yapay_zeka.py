@@ -39,19 +39,11 @@ with st.sidebar:
     
     if st.button("🎨 Görseli Oluştur"):
         if g_prompt:
-            with st.spinner("Çizim yapılıyor..."):
-                # Rastgele bir ID ile URL'yi benzersiz yap
-                img_url = f"https://pollinations.ai/p/{g_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={random.randint(1,999999)}"
-                
-                # Görselin gerçekten görsel olduğundan emin ol
-                try:
-                    img_response = requests.get(img_url, timeout=30)
-                    if img_response.status_code == 200 and 'image' in img_response.headers.get('Content-Type', ''):
-                        st.image(img_response.content, caption=f"'{g_prompt}'", use_column_width=True)
-                    else:
-                        st.error("Görsel sunucusu şu an meşgul. Lütfen tekrar dene.")
-                except Exception as e:
-                    st.error("Bir bağlantı hatası oluştu.")
+            # Rastgele seed oluştur
+            seed = random.randint(1, 999999)
+            img_url = f"https://pollinations.ai/p/{g_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={seed}"
+            # Doğrudan HTML ile görseli çağırıyoruz (Request hatasını atlar)
+            st.markdown(f'<img src="{img_url}" style="width:100%; border-radius:10px;">', unsafe_allow_html=True)
         else:
             st.warning("Lütfen bir açıklama gir.")
 
@@ -106,4 +98,4 @@ if prompt:
             st.error("⚠️ API Bağlantı Hatası!")
     except Exception as e:
         st.error(f"❌ Hata: {e}")
-    
+                         
