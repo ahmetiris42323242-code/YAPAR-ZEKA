@@ -35,17 +35,13 @@ with st.sidebar:
     
     st.markdown("---")
     st.subheader("🎨 Görsel Atölyesi")
-    
-    # Görsel formunu temizlenir hale getirdik
-    with st.form("gorsel_form", clear_on_submit=True):
-        g_prompt = st.text_input("Ne çizelim?")
-        submitted = st.form_submit_button("🎨 Görseli Oluştur")
-    
-    # Form tetiklendiğinde görseli göster
-    if submitted and g_prompt:
-        seed = random.randint(1, 999999)
-        img_url = f"https://pollinations.ai/p/{g_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={seed}"
-        st.image(img_url, caption=f"İsteğin: {g_prompt}")
+    # Hatayı tetikleyen 'g_prompt' değişkenini 'g_input' olarak güncelledik
+    g_input = st.text_input("Ne çizelim?")
+    if st.button("🎨 Görseli Oluştur"):
+        if g_input:
+            seed = random.randint(1, 999999)
+            img_url = f"https://pollinations.ai/p/{g_input.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={seed}"
+            st.image(img_url, caption=f"İsteğin: {g_input}")
 
 # --- SOHBET GÖSTERİMİ ---
 for i, msg in enumerate(st.session_state.messages):
@@ -62,8 +58,8 @@ with col1: prompt = st.chat_input("Mesajını yaz...")
 with col2: uploaded_file = st.file_uploader("Dosya", type=['txt', 'md', 'jpg', 'png'], label_visibility="collapsed")
 
 if prompt:
-    file_info = f"\n[Dosya: {uploaded_file.name}]" if uploaded_file else ""
-    st.session_state.messages.append({"role": "user", "content": prompt + file_info})
+    # Mesajı ekle ve işlemi sadece bir kez yap
+    st.session_state.messages.append({"role": "user", "content": prompt})
     
     user_loc = get_user_location()
     try:
@@ -94,8 +90,6 @@ if prompt:
             answer = response.json()['choices'][0]['message']['content']
             st.session_state.messages.append({"role": "assistant", "content": answer})
             st.rerun()
-        else:
-            st.error("⚠️ API Bağlantı Hatası!")
     except Exception as e:
         st.error(f"❌ Hata: {e}")
-            
+    
