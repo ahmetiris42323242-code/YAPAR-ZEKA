@@ -23,7 +23,6 @@ st.divider()
 # --- PANEL & DURUM ---
 if "is_dev_mode" not in st.session_state: st.session_state.is_dev_mode = False
 if "messages" not in st.session_state: st.session_state.messages = []
-if "gorsel_key" not in st.session_state: st.session_state.gorsel_key = 0
 
 with st.sidebar:
     st.subheader("⚙️ Geliştirici Paneli")
@@ -37,15 +36,24 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("🎨 Görsel Atölyesi")
     g_prompt = st.text_input("Ne çizelim?", key="g_prompt_input")
+    
     if st.button("🎨 Görseli Oluştur"):
         if g_prompt:
-            st.session_state.gorsel_key = random.randint(1, 999999)
+            with st.spinner("Çizim yapılıyor..."):
+                # Rastgele bir ID ile URL'yi benzersiz yap
+                img_url = f"https://pollinations.ai/p/{g_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={random.randint(1,999999)}"
+                
+                # Görselin gerçekten görsel olduğundan emin ol
+                try:
+                    img_response = requests.get(img_url, timeout=30)
+                    if img_response.status_code == 200 and 'image' in img_response.headers.get('Content-Type', ''):
+                        st.image(img_response.content, caption=f"'{g_prompt}'", use_column_width=True)
+                    else:
+                        st.error("Görsel sunucusu şu an meşgul. Lütfen tekrar dene.")
+                except Exception as e:
+                    st.error("Bir bağlantı hatası oluştu.")
         else:
             st.warning("Lütfen bir açıklama gir.")
-
-    if st.session_state.gorsel_key > 0:
-        img_url = f"https://pollinations.ai/p/{g_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={st.session_state.gorsel_key}"
-        st.image(img_url, caption=f"'{g_prompt}' için çizim", use_column_width=True)
 
 # --- SOHBET GÖSTERİMİ ---
 for i, msg in enumerate(st.session_state.messages):
@@ -98,4 +106,4 @@ if prompt:
             st.error("⚠️ API Bağlantı Hatası!")
     except Exception as e:
         st.error(f"❌ Hata: {e}")
-        
+    
