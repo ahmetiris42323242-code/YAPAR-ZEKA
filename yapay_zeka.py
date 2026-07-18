@@ -35,17 +35,15 @@ with st.sidebar:
     
     st.markdown("---")
     st.subheader("🎨 Görsel Atölyesi")
-    g_prompt = st.text_input("Ne çizelim?", key="g_prompt_input")
-    
+    g_prompt = st.text_input("Ne çizelim?")
     if st.button("🎨 Görseli Oluştur"):
         if g_prompt:
-            # Rastgele seed oluştur
+            # En temiz yöntem: st.image doğrudan URL ile çalışır, araya bot girmez.
             seed = random.randint(1, 999999)
             img_url = f"https://pollinations.ai/p/{g_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={seed}"
-            # Doğrudan HTML ile görseli çağırıyoruz (Request hatasını atlar)
-            st.markdown(f'<img src="{img_url}" style="width:100%; border-radius:10px;">', unsafe_allow_html=True)
+            st.image(img_url, caption=f"İsteğin: {g_prompt}")
         else:
-            st.warning("Lütfen bir açıklama gir.")
+            st.warning("Lütfen bir şey yaz!")
 
 # --- SOHBET GÖSTERİMİ ---
 for i, msg in enumerate(st.session_state.messages):
@@ -98,4 +96,4 @@ if prompt:
             st.error("⚠️ API Bağlantı Hatası!")
     except Exception as e:
         st.error(f"❌ Hata: {e}")
-                         
+        
