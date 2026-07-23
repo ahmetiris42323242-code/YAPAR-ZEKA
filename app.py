@@ -1,6 +1,6 @@
 """
 RYZEN AI PRO - GERÇEK YAPAY ZEKA ASİSTANI
-Tek dosya - Hepsi burada!
+Tek dosya - Kesin çalışan versiyon!
 """
 
 import streamlit as st
@@ -8,11 +8,10 @@ import os
 import json
 import hashlib
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, List, Optional
 import requests
 import pandas as pd
-import plotly.graph_objects as go
 
 # ============================================
 # SAYFA KONFIGÜRASYONU
@@ -20,8 +19,7 @@ import plotly.graph_objects as go
 st.set_page_config(
     page_title="Ryzen AI Pro",
     page_icon="🧠",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
 # ============================================
@@ -116,7 +114,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================
-# API AYARLARI (Kendi anahtarını ekle!)
+# API AYARLARI
 # ============================================
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
@@ -165,38 +163,51 @@ class Database:
         self.save()
 
 # ============================================
-# AI MOTORU - GERÇEK CEVAPLAR
+# AI MOTORU
 # ============================================
 class IntelligentAI:
     def __init__(self, db):
         self.db = db
         self.agents = {
-            "technical": {"name": "TechPro", "role": "Teknik Uzman", "icon": "💻", 
-                         "system": "Sen bir teknoloji uzmanısın. Kod, sistem, veri yapıları konularında derin bilgin var."},
-            "creative": {"name": "CreativeMind", "role": "Yaratıcı Yazar", "icon": "🎨",
-                        "system": "Sen yaratıcı bir yazarsın. İlham verici, özgün ve etkileyici içerikler üret."},
-            "analyst": {"name": "DataAnalyst", "role": "Veri Analisti", "icon": "📊",
-                       "system": "Sen bir veri analisti uzmanısın. Verileri yorumla ve içgörüler sun."},
-            "business": {"name": "BizPro", "role": "İş Danışmanı", "icon": "💼",
-                        "system": "Sen bir iş danışmanısın. Strateji ve yönetim konularında profesyonel tavsiyeler ver."}
+            "technical": {
+                "name": "TechPro",
+                "role": "Teknik Uzman",
+                "icon": "💻",
+                "system": "Sen bir teknoloji uzmanısın. Kod, sistem, veri yapıları konularında derin bilgin var."
+            },
+            "creative": {
+                "name": "CreativeMind",
+                "role": "Yaratıcı Yazar",
+                "icon": "🎨",
+                "system": "Sen yaratıcı bir yazarsın. İlham verici, özgün ve etkileyici içerikler üret."
+            },
+            "analyst": {
+                "name": "DataAnalyst",
+                "role": "Veri Analisti",
+                "icon": "📊",
+                "system": "Sen bir veri analisti uzmanısın. Verileri yorumla ve içgörüler sun."
+            },
+            "business": {
+                "name": "BizPro",
+                "role": "İş Danışmanı",
+                "icon": "💼",
+                "system": "Sen bir iş danışmanısın. Strateji ve yönetim konularında profesyonel tavsiyeler ver."
+            }
         }
     
     def _select_agent(self, query):
         q = query.lower()
-        if any(w in q for w in ["kod", "python", "sistem", "hata", "teknoloji", "yazılım", "bilgisayar"]):
+        if any(w in q for w in ["kod", "python", "sistem", "hata", "teknoloji", "yazılım"]):
             return "technical"
-        if any(w in q for w in ["şiir", "hikaye", "yaratıcı", "sanat", "edebiyat", "roman"]):
+        if any(w in q for w in ["şiir", "hikaye", "yaratıcı", "sanat", "edebiyat"]):
             return "creative"
-        if any(w in q for w in ["veri", "istatistik", "grafik", "analiz", "rapor", "sayı"]):
+        if any(w in q for w in ["veri", "istatistik", "grafik", "analiz", "rapor"]):
             return "analyst"
-        if any(w in q for w in ["strateji", "pazarlama", "yönetim", "iş", "satış", "müşteri"]):
+        if any(w in q for w in ["strateji", "pazarlama", "yönetim", "iş", "satış"]):
             return "business"
         return "technical"
     
     def _call_api(self, messages, model="gpt-3.5-turbo"):
-        """OpenAI veya Groq API'yi çağır"""
-        
-        # Önce OpenAI dene
         if OPENAI_API_KEY:
             try:
                 headers = {
@@ -220,7 +231,6 @@ class IntelligentAI:
             except:
                 pass
         
-        # OpenAI çalışmazsa Groq dene
         if GROQ_API_KEY:
             try:
                 headers = {
@@ -247,7 +257,6 @@ class IntelligentAI:
         return None
     
     def _fallback_response(self, query):
-        """API yoksa akıllı cevap"""
         q = query.lower()
         if "nasılsın" in q:
             return "Merhaba! Ben Ryzen AI, profesyonel bir asistanım. Size nasıl yardımcı olabilirim?"
@@ -257,33 +266,18 @@ class IntelligentAI:
             return "Python, yüksek seviyeli, genel amaçlı bir programlama dilidir. Web geliştirme, veri analizi, yapay zeka ve otomasyon için yaygın kullanılır."
         if "hava" in q:
             return "Bugün hava durumu: Güneşli, sıcaklık 24°C. Yağış beklenmiyor."
-        if "yardım" in q or "ne yapabilirsin" in q:
-            return "Size şu konularda yardımcı olabilirim:\n• Teknik sorular\n• Kod yazma\n• Veri analizi\n• İş stratejileri\n• Yaratıcı içerik"
-        
-        return f"""Merhaba! Size yardımcı olmak için buradayım.
-
-Sorunuz: "{query}"
-
-Bu konuda size detaylı bilgi verebilirim. Daha spesifik olursanız daha iyi yardımcı olabilirim.
-
-💡 Öneriler:
-• Teknik bir soru sorun
-• Kod örneği isteyin
-• Analiz veya rapor talep edin
-• Yaratıcı bir fikir isteyin"""
+        return f"Merhaba! Sorunuz: '{query}'. Bu konuda size detaylı bilgi verebilirim. Daha spesifik olursanız daha iyi yardımcı olabilirim."
     
     def ask(self, user_input, agent_key=None, model="gpt-3.5-turbo"):
         if not agent_key or agent_key not in self.agents:
             agent_key = self._select_agent(user_input)
         agent = self.agents[agent_key]
         
-        # Mesajları hazırla
         messages = [
             {"role": "system", "content": agent["system"]},
             {"role": "system", "content": "Türkçe cevap ver. Detaylı, profesyonel ve açıklayıcı ol."}
         ]
         
-        # Son konuşmaları ekle (bağlam)
         recent = self.db.get_messages()[-6:]
         for msg in recent:
             if msg["role"] == "user":
@@ -293,10 +287,7 @@ Bu konuda size detaylı bilgi verebilirim. Daha spesifik olursanız daha iyi yar
         
         messages.append({"role": "user", "content": user_input})
         
-        # API çağır
         response = self._call_api(messages, model)
-        
-        # API çalışmazsa fallback
         if not response:
             response = self._fallback_response(user_input)
         
@@ -369,18 +360,19 @@ if "page" not in st.session_state:
     st.session_state.page = "Chat"
 
 # ============================================
-# GİRİŞ
+# GİRİŞ EKRANI
 # ============================================
 def render_login():
-    st.markdown("""
-    <div style="text-align:center;padding:30px 0 10px 0;">
-        <div style="font-size:4rem;">🧠</div>
-        <h1 class="main-title">Ryzen AI Pro</h1>
-        <p style="color:#94a3b8;">Profesyonel Yapay Zeka Asistanı</p>
-        <span class="badge">⭐ Gerçek AI Cevapları</span>
-        <p style="color:#64748b;font-size:0.8rem;margin-top:10px;">🔐 Demo: admin / admin123</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div style="text-align:center;padding:30px 0 10px 0;">'
+        '<div style="font-size:4rem;">🧠</div>'
+        '<h1 class="main-title">Ryzen AI Pro</h1>'
+        '<p style="color:#94a3b8;">Profesyonel Yapay Zeka Asistanı</p>'
+        '<span class="badge">⭐ Gerçek AI Cevapları</span>'
+        '<p style="color:#64748b;font-size:0.8rem;margin-top:10px;">🔐 Demo: admin / admin123</p>'
+        '</div>',
+        unsafe_allow_html=True
+    )
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -396,7 +388,7 @@ def render_login():
                         st.session_state.user = user
                         st.session_state.db.add_message(
                             "assistant",
-                            f"👋 Hoş geldin {user['username']}! Ben Ryzen AI, profesyonel bir asistanım. Size nasıl yardımcı olabilirim?",
+                            "👋 Hoş geldin! Ben Ryzen AI, profesyonel bir asistanım. Size nasıl yardımcı olabilirim?",
                             "Ryzen"
                         )
                         st.rerun()
@@ -422,19 +414,20 @@ def render_login():
                             st.error("❌ Kullanıcı adı zaten var!")
 
 # ============================================
-# CHAT
+# CHAT SAYFASI
 # ============================================
 def render_chat():
-    st.markdown("""
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-        <h1 class="main-title" style="margin:0;">💬 Sohbet</h1>
-        <span class="badge" style="background:#059669;">🟢 Aktif</span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div style="display:flex;justify-content:space-between;align-items:center;">'
+        '<h1 class="main-title" style="margin:0;">💬 Sohbet</h1>'
+        '<span class="badge" style="background:#059669;">🟢 Aktif</span>'
+        '</div>',
+        unsafe_allow_html=True
+    )
     
     col1, col2, col3 = st.columns([2, 1.5, 1])
     with col1:
-        agent_names = [f"{a['icon']} {a['name']}" for a in st.session_state.ai.agents.values()]
+        agent_names = [a["icon"] + " " + a["name"] for a in st.session_state.ai.agents.values()]
         selected = st.selectbox("🤖 Uzman Seç", agent_names, index=0)
         agent_key = selected.split(" ")[1] if " " in selected else "technical"
     with col2:
@@ -447,37 +440,40 @@ def render_chat():
             st.rerun()
     
     if not OPENAI_API_KEY and not GROQ_API_KEY:
-        st.info("💡 **API anahtarı ekleyin!** OpenAI veya Groq API anahtarı ekleyerek gerçek AI cevapları alabilirsiniz. Şu anda demo cevaplar geliyor.")
+        st.info("💡 API anahtarı ekleyerek gerçek AI cevapları alabilirsiniz. Şu anda demo cevaplar geliyor.")
     
     msgs = st.session_state.db.get_messages()
     
     if not msgs:
-        st.markdown("""
-        <div style="text-align:center;padding:50px 20px;">
-            <div style="font-size:3rem;">👋</div>
-            <h3 style="color:#94a3b8;">Merhaba! Size nasıl yardımcı olabilirim?</h3>
-            <p style="color:#64748b;">Uzman bir AI asistan olarak sorularınızı cevaplıyorum.</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            '<div style="text-align:center;padding:50px 20px;">'
+            '<div style="font-size:3rem;">👋</div>'
+            '<h3 style="color:#94a3b8;">Merhaba! Size nasıl yardımcı olabilirim?</h3>'
+            '<p style="color:#64748b;">Uzman bir AI asistan olarak sorularınızı cevaplıyorum.</p>'
+            '</div>',
+            unsafe_allow_html=True
+        )
     else:
         for msg in msgs:
             if msg["role"] == "user":
-                st.markdown(f"""
-                <div class="chat-user">
-                    <strong>👤 Siz</strong>
-                    <div>{msg["content"]}</div>
-                    <div class="chat-time">{msg["timestamp"][:16]}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(
+                    '<div class="chat-user">'
+                    '<strong>👤 Siz</strong>'
+                    '<div>' + msg["content"] + '</div>'
+                    '<div class="chat-time">' + msg["timestamp"][:16] + '</div>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
             else:
                 agent_name = msg.get("agent", "Ryzen")
-                st.markdown(f"""
-                <div class="chat-assistant">
-                    <div class="agent-name">🧠 {agent_name}</div>
-                    <div>{msg["content"]}</div>
-                    <div class="chat-time">{msg["timestamp"][:16]}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(
+                    '<div class="chat-assistant">'
+                    '<div class="agent-name">🧠 ' + agent_name + '</div>'
+                    '<div>' + msg["content"] + '</div>'
+                    '<div class="chat-time">' + msg["timestamp"][:16] + '</div>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
     
     st.divider()
     if prompt := st.chat_input("Sorunuzu yazın..."):
@@ -500,7 +496,7 @@ def render_chat():
                 st.rerun()
 
 # ============================================
-# ANALİTİK
+# ANALİTİK SAYFASI
 # ============================================
 def render_analytics():
     st.markdown('<h1 class="main-title">📊 Analitik</h1>', unsafe_allow_html=True)
@@ -509,28 +505,44 @@ def render_analytics():
     
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-number">{stats["total_messages"]}</div>
-            <div style="color:#94a3b8;">📝 Toplam Mesaj</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            '<div class="stat-card">'
+            '<div class="stat-number">' + str(stats["total_messages"]) + '</div>'
+            '<div style="color:#94a3b8;">📝 Toplam Mesaj</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
     with c2:
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-number">{stats["total_conversations"]}</div>
-            <div style="color:#94a3b8;">💬 Konuşma</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            '<div class="stat-card">'
+            '<div class="stat-number">' + str(stats["total_conversations"]) + '</div>'
+            '<div style="color:#94a3b8;">💬 Konuşma</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
     with c3:
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-number">{len(stats.get("agents", []))}</div>
-            <div style="color:#94a3b8;">🤖 Uzman</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            '<div class="stat-card">'
+            '<div class="stat-number">' + str(len(stats.get("agents", []))) + '</div>'
+            '<div style="color:#94a3b8;">🤖 Uzman</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
     with c4:
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-number">{len(st.session_state.db.data.get("users", {}))}</div>
-            <div style="color:#94a3b8;">👥 Kullanıc
+        st.markdown(
+            '<div class="stat-card">'
+            '<div class="stat-number">' + str(len(st.session_state.db.data.get("users", {}))) + '</div>'
+            '<div style="color:#94a3b8;">👥 Kullanıcı</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+# ============================================
+# AYARLAR SAYFASI
+# ============================================
+def render_settings():
+    st.markdown('<h1 class="main-title">⚙️ Ayarlar</h1>', unsafe_allow_html=True)
+    
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("🔧 
