@@ -1,10 +1,9 @@
 """
-RYZEN AI ENTERPRISE - PROFESYONEL TEK DOSYA
-Versiyon: 3.0.0
-Tüm özellikler tek dosyada - Bomboş ekran yok!
+RYZEN AI ENTERPRISE - DÜZELTİLMİŞ VERSİYON
 """
 
 import streamlit as st
+import os  # <--- EKLENDI!
 import json
 import hashlib
 import random
@@ -18,7 +17,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 # ============================================
-# SAYFA KONFIGÜRASYONU - İLK SATIR OLMALI!
+# SAYFA KONFIGÜRASYONU
 # ============================================
 st.set_page_config(
     page_title="🏢 Ryzen AI Enterprise",
@@ -28,11 +27,10 @@ st.set_page_config(
 )
 
 # ============================================
-# CSS - PROFESYONEL KURUMSAL TEMA
+# CSS - KURUMSAL TEMA
 # ============================================
 st.markdown("""
 <style>
-    /* ===== KURUMSAL RENKLER ===== */
     :root {
         --primary: #2563eb;
         --secondary: #7c3aed;
@@ -44,12 +42,6 @@ st.markdown("""
         --gray: #94a3b8;
     }
     
-    /* ===== GENEL ===== */
-    .main {
-        padding: 0 10px;
-    }
-    
-    /* ===== BAŞLIK ===== */
     .enterprise-title {
         background: linear-gradient(135deg, var(--primary), var(--secondary));
         -webkit-background-clip: text;
@@ -82,7 +74,6 @@ st.markdown("""
         50% { opacity: 0.5; }
     }
     
-    /* ===== KARTLAR ===== */
     .card {
         background: rgba(255,255,255,0.03);
         backdrop-filter: blur(10px);
@@ -104,7 +95,6 @@ st.markdown("""
         border: 1px solid rgba(37,99,235,0.15);
     }
     
-    /* ===== CHAT MESAJLARI ===== */
     .chat-user {
         background: linear-gradient(135deg, var(--primary), var(--secondary));
         color: white;
@@ -152,7 +142,6 @@ st.markdown("""
         to { opacity: 1; transform: translateX(0); }
     }
     
-    /* ===== SIDEBAR ===== */
     .sidebar-header {
         background: linear-gradient(135deg, var(--primary), var(--secondary));
         padding: 20px;
@@ -179,7 +168,6 @@ st.markdown("""
         margin: 0;
     }
     
-    /* ===== STAT KARTLARI ===== */
     .stat-card {
         background: rgba(255,255,255,0.03);
         border-radius: 12px;
@@ -204,7 +192,6 @@ st.markdown("""
         margin-top: 4px;
     }
     
-    /* ===== FOOTER ===== */
     .footer {
         text-align: center;
         color: #475569;
@@ -214,7 +201,6 @@ st.markdown("""
         margin-top: 20px;
     }
     
-    /* ===== MOBİL UYUM ===== */
     @media (max-width: 768px) {
         .enterprise-title {
             font-size: 1.8rem;
@@ -227,12 +213,8 @@ st.markdown("""
         .stat-number {
             font-size: 1.5rem;
         }
-        .sidebar-header h3 {
-            font-size: 0.95rem;
-        }
     }
     
-    /* ===== SCROLLBAR ===== */
     ::-webkit-scrollbar {
         width: 4px;
         height: 4px;
@@ -248,7 +230,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================
-# VERİTABANI (JSON PERSISTENCE)
+# VERİTABANI
 # ============================================
 class Database:
     def __init__(self, db_file="ryzen_db.json"):
@@ -336,12 +318,10 @@ class RyzenAI:
         
         agent = self.agents[agent_key]
         
-        # Web araması
         web_result = ""
         if any(w in user_input for w in ["?", "nedir", "nasıl", "kimdir", "nerede"]):
             web_result = self.web_search(user_input)
         
-        # Cevap oluştur
         parts = []
         parts.append(f"🤖 **{agent['icon']} {agent['name']}** ({agent['role']})")
         parts.append("")
@@ -358,7 +338,6 @@ class RyzenAI:
         
         response = "\n".join(parts)
         
-        # Kaydet
         self.db.add_message("user", user_input)
         self.db.add_message("assistant", response, agent['name'])
         
@@ -387,7 +366,7 @@ class AuthManager:
     def __init__(self, db: Database):
         self.db = db
     
-    def login(self, username: str, password: str) -> Optional[Dict]:
+    def login(self, username: str, password: str):
         users = self.db.data.get("users", {})
         if username not in users:
             return None
@@ -397,7 +376,7 @@ class AuthManager:
             return None
         return {"username": username, "role": user.get("role", "user"), "email": user.get("email", "")}
     
-    def register(self, username: str, email: str, password: str) -> Optional[Dict]:
+    def register(self, username: str, email: str, password: str):
         users = self.db.data.get("users", {})
         if username in users:
             return None
@@ -454,9 +433,7 @@ def render_login():
                     if user:
                         st.session_state.user = user
                         st.session_state.messages = []
-                        # Hoş geldin mesajı
-                        welcome = f"👋 Hoş geldin **{user['username']}**! Sana nasıl yardımcı olabilirim?"
-                        st.session_state.db.add_message("assistant", welcome, "Ryzen")
+                        st.session_state.db.add_message("assistant", f"👋 Hoş geldin **{user['username']}**! Sana nasıl yardımcı olabilirim?", "Ryzen")
                         st.rerun()
                     else:
                         st.error("❌ Geçersiz kullanıcı!")
@@ -483,7 +460,6 @@ def render_login():
 # CHAT SAYFASI
 # ============================================
 def render_chat():
-    # Başlık
     st.markdown("""
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
         <h1 class="enterprise-title" style="margin:0;">💬 Sohbet</h1>
@@ -493,7 +469,6 @@ def render_chat():
     </div>
     """, unsafe_allow_html=True)
     
-    # Agent seçimi
     col1, col2 = st.columns([3, 1])
     with col1:
         agent_names = [f"{a['icon']} {a['name']}" for a in st.session_state.ai.agents.values()]
@@ -508,11 +483,9 @@ def render_chat():
             st.session_state.messages = []
             st.rerun()
     
-    # Mesajları göster
     msgs = st.session_state.db.get_messages()
     
     if not msgs:
-        # Hoş geldin mesajı
         st.markdown("""
         <div style="text-align:center;padding:40px 20px;">
             <div style="font-size:3rem;">👋</div>
@@ -540,14 +513,12 @@ def render_chat():
                 </div>
                 """, unsafe_allow_html=True)
     
-    # Input
     st.divider()
     if prompt := st.chat_input("Mesajınızı yazın..."):
         with st.spinner("Düşünüyor..."):
-            response = st.session_state.ai.ask(prompt, agent_key)
+            st.session_state.ai.ask(prompt, agent_key)
         st.rerun()
     
-    # Hızlı komutlar
     st.caption("⚡ Hızlı Komutlar")
     cols = st.columns(4)
     quick = [
@@ -591,4 +562,28 @@ def render_agents():
 
 # ============================================
 # ANALİTİK SAYFASI
-# ============================
+# ============================================
+def render_analytics():
+    st.markdown("<h1 class='enterprise-title'>📊 Analitik</h1>", unsafe_allow_html=True)
+    
+    stats = st.session_state.ai.get_stats()
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{stats['total_messages']}</div>
+            <div class="stat-label">📝 Toplam Mesaj</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{stats['total_conversations']}</div>
+            <div class="stat-label">💬 Konuşma</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{len
