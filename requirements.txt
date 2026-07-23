@@ -1,6 +1,4 @@
-streamlit
+streamlit>=1.38.0
 requests
-duckduckgo-search
-gtts
-huggingface_hub
-Pillow
+beautifulsoup4
+python-dotenv
