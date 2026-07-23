@@ -1,258 +1,191 @@
-import streamlit as st
-import requests
+import os
 import json
 import hashlib
-import time
 from datetime import datetime
-from typing import List, Dict
-import re
+from typing import List, Dict, Any, Optional
+import openai
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.vectorstores import Chroma
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.document_loaders import TextLoader, PyPDFLoader
+import yaml
 
-# ============================================
-# YAPAY ZEKA ASİSTANI SINIFI (BENZİNİ)
-# ============================================
-class AI_Assistant:
-    """Benim gibi çalışan bir yapay zeka asistanı"""
+from .memory import MemorySystem
+from .rag import RAGSystem
+from .web_search import WebSearch
+from .code_executor import CodeExecutor
+
+class ProfessionalAI:
+    """Kurumsal seviye AI asistanı"""
     
-    def __init__(self):
-        self.name = "Ryzen"
-        self.conversations = []
-        self.memory_limit = 100
+    def __init__(self, config_path="config.yaml"):
+        self.config = self.load_config(config_path)
+        self.name = self.config['app']['name']
+        self.memory = MemorySystem()
+        self.rag = RAGSystem(self.config)
+        self.web_search = WebSearch()
+        self.code_executor = CodeExecutor()
+        self.conversation_id = None
+        self.user_id = None
+        
+        # OpenAI API
+        openai.api_key = os.getenv('OPENAI_API_KEY')
+        
+        # Vektör veritabanı
+        if self.config['rag']['enabled']:
+            self.vector_db = Chroma(
+                persist_directory="data/vector_db/",
+                embedding_function=OpenAIEmbeddings()
+            )
+    
+    def load_config(self, path):
+        with open(path, 'r') as f:
+            return yaml.safe_load(f)
+    
+    def ask(self, user_input: str, context: Dict = None) -> Dict:
+        """Profesyonel cevap üret"""
+        
+        response = {
+            "content": "",
+            "metadata": {
+                "model": self.config['models']['default'],
+                "tokens": 0,
+                "source": "ai",
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        }
+        
+        try:
+            # 1. RAG araması (varsa)
+            rag_context = ""
+            if self.config['rag']['enabled']:
+                rag_results = self.rag.search(user_input)
+                if rag_results:
+                    rag_context = "\n\n".join([r['content'] for r in rag_results[:3]])
+            
+            # 2. Web araması (gerekirse)
+            web_context = ""
+            if "?" in user_input or "nedir" in user_input:
+                web_context = self.web_search.search(user_input)
+            
+            # 3. Hafıza
+            memory_context = self.memory.search(user_input)
+            
+            # 4. Düşünce zinciri
+            thoughts = self.think(user_input)
+            
+            # 5. Prompt oluştur
+            prompt = self.build_prompt(
+                user_input, 
+                context=rag_context,
+                web=web_context,
+                memory=memory_context,
+                thoughts=thoughts
+            )
+            
+            # 6. AI çağrısı
+            completion = openai.ChatCompletion.create(
+                model=self.config['models']['default'],
+                messages=[
+                    {"role": "system", "content": "Sen profesyonel bir AI asistanısın."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=2000
+            )
+            
+            # 7. Cevabı işle
+            answer = completion.choices[0].message.content
+            tokens_used = completion.usage.total_tokens
+            
+            response['content'] = answer
+            response['metadata']['tokens'] = tokens_used
+            response['metadata']['model'] = self.config['models']['default']
+            response['metadata']['thoughts'] = thoughts
+            
+            # 8. Hafızaya kaydet
+            self.memory.add(user_input, answer)
+            
+            return response
+            
+        except Exception as e:
+            response['content'] = f"❌ Hata: {str(e)}"
+            response['metadata']['error'] = str(e)
+            return response
     
     def think(self, problem: str) -> List[str]:
-        """Düşünce zinciri"""
+        """Gelişmiş düşünce zinciri"""
         return [
-            f"1. Problemi anlıyorum: {problem[:50]}...",
-            "2. Analiz ediyorum...",
-            "3. Çözüm yolları üretiyorum...",
+            f"1. Problemi analiz ediyorum: {problem[:50]}...",
+            "2. Bağlamı kontrol ediyorum...",
+            "3. İlgili kaynakları tarıyorum...",
             "4. En iyi yaklaşımı seçiyorum...",
-            "5. Cevabı oluşturuyorum."
+            "5. Cevabı oluşturuyorum ve doğruluyorum..."
         ]
     
-    def web_search(self, query: str) -> str:
-        """Basit web araması"""
-        try:
-            # DuckDuckGo üzerinden basit arama
-            url = f"https://api.duckduckgo.com/?q={query}&format=json"
-            response = requests.get(url, timeout=5)
-            data = response.json()
-            if data.get('AbstractText'):
-                return data['AbstractText'][:500]
-            return "Arama sonucu bulunamadı."
-        except:
-            return "Web araması şu anda kullanılamıyor."
+    def build_prompt(self, user_input: str, **context) -> str:
+        """Prompt oluştur"""
+        prompt_parts = [
+            f"Soru: {user_input}",
+        ]
+        
+        if context.get('context'):
+            prompt_parts.append(f"\nBağlam:\n{context['context']}")
+        
+        if context.get('web'):
+            prompt_parts.append(f"\nWeb Arama:\n{context['web']}")
+        
+        if context.get('memory'):
+            prompt_parts.append(f"\nHafıza:\n{context['memory']}")
+        
+        if context.get('thoughts'):
+            prompt_parts.append(f"\nDüşünce:\n{' → '.join(context['thoughts'])}")
+        
+        prompt_parts.append("\nLütfen profesyonel ve doğru bir cevap ver.")
+        
+        return "\n".join(prompt_parts)
     
-    def ask(self, user_input: str) -> str:
-        """Soruya cevap üret"""
-        # Düşünce zinciri
-        thoughts = self.think(user_input)
-        
-        # Web araması (soru içeriyorsa)
-        web_result = ""
-        if "?" in user_input or "nedir" in user_input or "nasıl" in user_input:
-            web_result = self.web_search(user_input)
-        
-        # Cevap oluştur
-        if web_result and "bulunamadı" not in web_result:
-            response = f"🌐 **Arama Sonucu:**\n{web_result}\n\n"
-            response += f"💭 **Düşünce:** {' → '.join(thoughts)}"
-        else:
-            response = f"💭 **Düşünce Zinciri:**\n"
-            for t in thoughts:
-                response += f"  • {t}\n"
-            response += f"\n🤖 **Cevap:** {user_input} hakkında yardımcı olabilirim. Daha spesifik olursan daha iyi cevap verebilirim."
-        
-        # Hafızaya kaydet
-        self.conversations.append({
-            "user": user_input,
-            "ai": response,
-            "timestamp": datetime.now().isoformat()
-        })
-        
-        # Hafıza limiti
-        if len(self.conversations) > self.memory_limit:
-            self.conversations = self.conversations[-self.memory_limit:]
-        
-        return response
-    
-    def get_memory(self) -> List[Dict]:
+    def get_conversation(self, conversation_id: int) -> List[Dict]:
         """Konuşma geçmişini getir"""
-        return self.conversations[-10:]
-
-
-# ============================================
-# STREAMLIT ARAYÜZÜ
-# ============================================
-
-st.set_page_config(
-    page_title="🧠 Ryzen AI Asistan",
-    page_icon="🧠",
-    layout="wide"
-)
-
-# CSS ile özelleştirme
-st.markdown("""
-<style>
-    .stChatMessage {
-        background-color: #f0f2f6;
-        border-radius: 10px;
-        padding: 10px;
-        margin: 5px 0;
-    }
-    .stChatMessage[data-testid="user"] {
-        background-color: #dcf8c6;
-    }
-    .stChatMessage[data-testid="assistant"] {
-        background-color: #e8f0fe;
-    }
-    .main-title {
-        background: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 3rem;
-        font-weight: bold;
-        text-align: center;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Başlık
-st.markdown('<p class="main-title">🧠 Ryzen AI Asistan</p>', unsafe_allow_html=True)
-st.caption("Benimle aynı seviyede çalışan yapay zeka - Streamlit üzerinde")
-
-# Sidebar - Ayarlar
-with st.sidebar:
-    st.header("⚙️ Ayarlar")
+        return self.memory.get_conversation(conversation_id)
     
-    # Asistan adı
-    assistant_name = st.text_input("Asistan Adı", value="Ryzen")
-    
-    # Hafıza boyutu
-    memory_size = st.slider("Hafıza Boyutu", min_value=5, max_value=50, value=20)
-    
-    # Web araması
-    web_search_enabled = st.toggle("🌐 Web Araması", value=True)
-    
-    # Düşünce zinciri
-    show_thoughts = st.toggle("💭 Düşünce Zinciri Göster", value=True)
-    
-    st.divider()
-    
-    # İstatistikler
-    st.subheader("📊 İstatistikler")
-    if "assistant" in st.session_state:
-        conv_count = len(st.session_state.assistant.conversations)
-        st.metric("Toplam Konuşma", conv_count)
-        st.metric("Hafıza Kullanımı", f"{conv_count}/{memory_size}")
-    
-    st.divider()
-    
-    # Temizle
-    if st.button("🗑️ Konuşmayı Temizle", type="secondary"):
-        if "assistant" in st.session_state:
-            st.session_state.assistant.conversations = []
-            st.session_state.messages = []
-            st.rerun()
-    
-    st.divider()
-    
-    # Bilgi
-    st.caption("🔹 **Nasıl Çalışır?**")
-    st.caption("Bu asistan, web araması, düşünce zinciri ve hafıza ile çalışır.")
-    st.caption("📌 **Komutlar:**")
-    st.caption("  • Normal sorular → Cevap verir")
-    st.caption("  • `kod:` → Kod çalıştırır")
-    st.caption("  • `ara:` → Web araması yapar")
-
-# Ana alan - iki sütun
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    # Asistanı başlat
-    if "assistant" not in st.session_state:
-        st.session_state.assistant = AI_Assistant()
-        st.session_state.messages = []
-        st.session_state.assistant.name = assistant_name
-    
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    
-    # Sohbet geçmişini göster
-    for msg in st.session_state.messages:
-        role = msg.get("role", "assistant")
-        content = msg.get("content", "")
-        with st.chat_message(role):
-            st.markdown(content)
-    
-    # Kullanıcı girişi
-    prompt = st.chat_input("Mesajını yaz...")
-    
-    if prompt:
-        # Kullanıcı mesajını ekle
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
+    def export_conversation(self, conversation_id: int, format: str = "json") -> bytes:
+        """Konuşmayı dışa aktar"""
+        import json
+        import csv
+        from io import StringIO, BytesIO
         
-        # Asistan yanıtı üret
-        with st.chat_message("assistant"):
-            response_placeholder = st.empty()
-            
-            # Asistanı güncelle
-            asistan = st.session_state.assistant
-            asistan.name = assistant_name
-            
-            # Web aramasını kontrol et
-            if prompt.startswith("ara:") or prompt.startswith("search:"):
-                query = prompt.replace("ara:", "").replace("search:", "").strip()
-                response = asistan.web_search(query)
-                if response:
-                    response = f"🔍 **Arama Sonucu:**\n{response}"
-                else:
-                    response = "❌ Arama sonucu bulunamadı."
-            else:
-                # Normal soru
-                response = asistan.ask(prompt)
-                # Düşünce zincirini gizle/göster
-                if not show_thoughts:
-                    # Sadece cevap kısmını göster
-                    response = response.split("**Cevap:**")[-1] if "**Cevap:**" in response else response
-            
-            # Yanıtı göster (türkçe karakterler için decode)
-            response_placeholder.markdown(response)
-            
-            # Mesajı kaydet
-            st.session_state.messages.append({"role": "assistant", "content": response})
+        messages = self.get_conversation(conversation_id)
         
-        st.rerun()
-
-with col2:
-    st.subheader("📝 Konuşma Geçmişi")
-    
-    if "assistant" in st.session_state:
-        memory = st.session_state.assistant.get_memory()
-        if memory:
-            for i, conv in enumerate(reversed(memory)):
-                with st.expander(f"🗣️ Konuşma {len(memory)-i}"):
-                    st.caption(f"👤 **Sen:** {conv['user'][:50]}...")
-                    st.caption(f"🤖 **Asistan:** {conv['ai'][:80]}...")
-                    st.caption(f"🕐 {conv.get('timestamp', '')[:16]}")
-        else:
-            st.info("Henüz konuşma yok.")
-    
-    # Hızlı komutlar
-    st.divider()
-    st.subheader("⚡ Hızlı Komutlar")
-    
-    if st.button("🔍 Bugün hava nasıl?"):
-        prompt = "ara: bugün hava nasıl"
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.rerun()
-    
-    if st.button("💻 Python'da dosya okuma"):
-        prompt = "Python'da dosya nasıl okunur?"
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.rerun()
-    
-    if st.button("🌐 Dünya nüfusu nedir?"):
-        prompt = "Dünya nüfusu kaç?"
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.rerun()
+        if format == "json":
+            return json.dumps(messages, indent=2, ensure_ascii=False).encode('utf-8')
+        elif format == "csv":
+            output = StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Role", "Content", "Timestamp"])
+            for msg in messages:
+                writer.writerow([msg['role'], msg['content'], msg['timestamp']])
+            return output.getvalue().encode('utf-8')
+        elif format == "pdf":
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib.units import mm
+            
+            buffer = BytesIO()
+            c = canvas.Canvas(buffer, pagesize=A4)
+            c.setFont("Helvetica", 10)
+            y = A4[1] - 20
+            c.drawString(20, y, f"Conversation Export - {datetime.utcnow().isoformat()}")
+            y -= 10
+            
+            for msg in messages:
+                c.drawString(20, y, f"{msg['role']}: {msg['content'][:100]}...")
+                y -= 15
+                if y < 20:
+                    c.showPage()
+                    y = A4[1] - 20
+            
+            c.save()
+            return buffer.getvalue()
+        
+        return b"Unsupported format"
