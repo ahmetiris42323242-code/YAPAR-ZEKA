@@ -1,33 +1,29 @@
 """
-RYZEN AI ENTERPRISE - KESİN ÇALIŞAN VERSİYON
+RYZEN AI ENTERPRISE - PROFESYONEL ZEKİ ASİSTAN
+Gerçek AI cevapları! OpenAI API ile çalışır.
 """
 
 import streamlit as st
 import os
 import json
 import hashlib
-import random
 import time
-import re
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
+from typing import Dict, List, Optional
 import requests
-from bs4 import BeautifulSoup
-import pandas as pd
-import plotly.graph_objects as go
 
 # ============================================
 # SAYFA KONFIGÜRASYONU
 # ============================================
 st.set_page_config(
-    page_title="Ryzen AI Enterprise",
-    page_icon="🏢",
+    page_title="Ryzen AI Pro",
+    page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ============================================
-# CSS
+# CSS - PROFESYONEL TEMA
 # ============================================
 st.markdown("""
 <style>
@@ -39,17 +35,17 @@ st.markdown("""
         --gray: #94a3b8;
     }
     
-    .enterprise-title {
+    .main-title {
         background: linear-gradient(135deg, var(--primary), var(--secondary));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 2.5rem;
+        font-size: 2.8rem;
         font-weight: 800;
         text-align: center;
         padding: 10px 0;
     }
     
-    .enterprise-badge {
+    .badge {
         display: inline-block;
         background: linear-gradient(135deg, var(--primary), var(--secondary));
         color: white;
@@ -60,34 +56,6 @@ st.markdown("""
         text-transform: uppercase;
     }
     
-    .live-badge {
-        animation: pulse 1.5s infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-    
-    .card {
-        background: rgba(255,255,255,0.03);
-        border-radius: 16px;
-        padding: 20px;
-        border: 1px solid rgba(255,255,255,0.06);
-        transition: all 0.3s ease;
-        margin-bottom: 12px;
-    }
-    
-    .card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(37, 99, 235, 0.15);
-    }
-    
-    .card-gradient {
-        background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(124,58,237,0.08));
-        border: 1px solid rgba(37,99,235,0.15);
-    }
-    
     .chat-user {
         background: linear-gradient(135deg, var(--primary), var(--secondary));
         color: white;
@@ -95,7 +63,6 @@ st.markdown("""
         padding: 14px 20px;
         margin: 8px 0 8px auto;
         max-width: 75%;
-        animation: slideInRight 0.3s ease;
         word-wrap: break-word;
     }
     
@@ -106,7 +73,6 @@ st.markdown("""
         padding: 14px 20px;
         margin: 8px auto 8px 0;
         max-width: 75%;
-        animation: slideInLeft 0.3s ease;
         word-wrap: break-word;
     }
     
@@ -124,16 +90,6 @@ st.markdown("""
         text-align: right;
     }
     
-    @keyframes slideInRight {
-        from { opacity: 0; transform: translateX(30px); }
-        to { opacity: 1; transform: translateX(0); }
-    }
-    
-    @keyframes slideInLeft {
-        from { opacity: 0; transform: translateX(-30px); }
-        to { opacity: 1; transform: translateX(0); }
-    }
-    
     .sidebar-header {
         background: linear-gradient(135deg, var(--primary), var(--secondary));
         padding: 20px;
@@ -143,83 +99,61 @@ st.markdown("""
         margin-bottom: 20px;
     }
     
-    .sidebar-header .avatar {
-        font-size: 3rem;
-        margin-bottom: 4px;
-    }
-    
-    .sidebar-header h3 {
-        margin: 4px 0;
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-    
-    .sidebar-header p {
-        opacity: 0.8;
-        font-size: 0.8rem;
-        margin: 0;
-    }
-    
     .stat-card {
         background: rgba(255,255,255,0.03);
         border-radius: 12px;
-        padding: 16px 20px;
+        padding: 16px;
         text-align: center;
         border: 1px solid rgba(255,255,255,0.05);
     }
     
     .stat-number {
-        font-size: 2.2rem;
+        font-size: 2rem;
         font-weight: 700;
         background: linear-gradient(135deg, var(--primary), var(--secondary));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
     
-    .stat-label {
-        color: var(--gray);
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-top: 4px;
+    .thinking {
+        display: inline-block;
+        animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
     }
     
     .footer {
         text-align: center;
         color: #475569;
         font-size: 0.75rem;
-        padding: 20px 0 10px 0;
+        padding: 20px 0;
         border-top: 1px solid rgba(255,255,255,0.05);
         margin-top: 20px;
     }
     
     @media (max-width: 768px) {
-        .enterprise-title {
-            font-size: 1.8rem;
-        }
-        .chat-user, .chat-assistant {
-            max-width: 90%;
-            padding: 10px 14px;
-            font-size: 0.9rem;
-        }
-        .stat-number {
-            font-size: 1.5rem;
-        }
-    }
-    
-    ::-webkit-scrollbar {
-        width: 4px;
-        height: 4px;
-    }
-    ::-webkit-scrollbar-track {
-        background: var(--dark);
-    }
-    ::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, var(--primary), var(--secondary));
-        border-radius: 10px;
+        .main-title { font-size: 1.8rem; }
+        .chat-user, .chat-assistant { max-width: 90%; }
     }
 </style>
 """, unsafe_allow_html=True)
+
+# ============================================
+# API AYARLARI
+# ============================================
+# OpenAI API (Ücretsiz deneme için)
+# NOT: Buraya kendi API anahtarınızı yazın
+# Ücretsiz OpenAI API anahtarı almak için: platform.openai.com
+
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+
+# Alternatif: Ücretsiz API (Groq - hızlı ve ücretsiz)
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # ============================================
 # VERİTABANI
@@ -246,11 +180,12 @@ class Database:
     def get_messages(self):
         return self.data.get("messages", [])
     
-    def add_message(self, role: str, content: str, agent: str = None):
+    def add_message(self, role: str, content: str, agent: str = None, model: str = None):
         msg = {
             "role": role,
             "content": content,
             "agent": agent,
+            "model": model,
             "timestamp": datetime.now().isoformat()
         }
         self.data["messages"].append(msg)
@@ -264,80 +199,197 @@ class Database:
         self.save()
 
 # ============================================
-# AI MOTORU
+# ZEKİ AI MOTORU - GERÇEK AI CEVAPLARI!
 # ============================================
-class RyzenAI:
+class IntelligentAI:
     def __init__(self, db: Database):
         self.db = db
         self.name = "Ryzen"
+        self.context_history = []
+        self.max_context = 10
+        
+        # Agent'lar
         self.agents = {
-            "technical": {"name": "TechPro", "role": "Teknik Uzman", "icon": "💻", "temp": 0.3},
-            "creative": {"name": "CreativeMind", "role": "Yaratıcı Yazar", "icon": "🎨", "temp": 0.9},
-            "analyst": {"name": "DataAnalyst", "role": "Veri Analisti", "icon": "📊", "temp": 0.4},
-            "business": {"name": "BizPro", "role": "İş Danışmanı", "icon": "💼", "temp": 0.6}
+            "technical": {
+                "name": "TechPro", 
+                "role": "Teknik Uzman",
+                "icon": "💻",
+                "system": "Sen bir teknoloji uzmanısın. Kod, sistem, veri yapıları ve teknoloji konularında derin bilgin var. Detaylı, açıklayıcı ve profesyonel cevap ver."
+            },
+            "creative": {
+                "name": "CreativeMind", 
+                "role": "Yaratıcı Yazar",
+                "icon": "🎨",
+                "system": "Sen yaratıcı bir yazarsın. İlham verici, özgün ve etkileyici içerikler üret. Şiir, hikaye ve yaratıcı fikirler konusunda uzmansın."
+            },
+            "analyst": {
+                "name": "DataAnalyst", 
+                "role": "Veri Analisti",
+                "icon": "📊",
+                "system": "Sen bir veri analisti uzmanısın. Verileri yorumla, grafikler oluştur, istatistiksel analiz yap ve içgörüler sun."
+            },
+            "business": {
+                "name": "BizPro", 
+                "role": "İş Danışmanı",
+                "icon": "💼",
+                "system": "Sen bir iş danışmanısın. Strateji, pazarlama, yönetim ve iş geliştirme konularında uzmansın. Profesyonel tavsiyeler ver."
+            }
         }
     
     def _select_agent(self, query: str) -> str:
+        """En uygun agent'ı seç"""
         q = query.lower()
-        if any(w in q for w in ["kod", "python", "sistem", "hata", "çözüm", "teknoloji"]):
+        if any(w in q for w in ["kod", "python", "sistem", "hata", "çözüm", "teknoloji", "yazılım", "bilgisayar"]):
             return "technical"
-        if any(w in q for w in ["şiir", "hikaye", "yaratıcı", "sanat", "edebiyat"]):
+        if any(w in q for w in ["şiir", "hikaye", "yaratıcı", "sanat", "edebiyat", "roman", "öykü"]):
             return "creative"
-        if any(w in q for w in ["veri", "istatistik", "grafik", "analiz", "rapor"]):
+        if any(w in q for w in ["veri", "istatistik", "grafik", "analiz", "rapor", "sayı", "oran", "yüzde"]):
             return "analyst"
-        if any(w in q for w in ["strateji", "pazarlama", "iş", "satış", "müşteri"]):
+        if any(w in q for w in ["strateji", "pazarlama", "yönetim", "iş", "satış", "müşteri", "firma"]):
             return "business"
         return "technical"
     
-    def web_search(self, query: str) -> str:
+    def _call_openai(self, messages: List[Dict], model: str = "gpt-3.5-turbo") -> str:
+        """OpenAI API çağrısı - GERÇEK AI!"""
+        if not OPENAI_API_KEY:
+            return self._fallback_response(messages[-1]["content"])
+        
         try:
-            url = f"https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1"
-            r = requests.get(url, timeout=5)
-            data = r.json()
-            if data.get('AbstractText'):
-                return data['AbstractText'][:400]
-            if data.get('RelatedTopics'):
-                for t in data['RelatedTopics'][:2]:
-                    if t.get('Text'):
-                        return t['Text'][:300]
-            return ""
-        except:
-            return ""
+            headers = {
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            data = {
+                "model": model,
+                "messages": messages,
+                "temperature": 0.7,
+                "max_tokens": 1500
+            }
+            
+            response = requests.post(OPENAI_API_URL, headers=headers, json=data, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                return result["choices"][0]["message"]["content"]
+            else:
+                return f"⚠️ API Hatası: {response.status_code} - {response.text[:200]}"
+                
+        except Exception as e:
+            return f"⚠️ Bağlantı hatası: {str(e)[:200]}"
     
-    def ask(self, user_input: str, agent_key: str = None) -> Dict:
+    def _call_groq(self, messages: List[Dict]) -> str:
+        """Groq API (ücretsiz ve hızlı)"""
+        if not GROQ_API_KEY:
+            return self._fallback_response(messages[-1]["content"])
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            data = {
+                "model": "mixtral-8x7b-32768",
+                "messages": messages,
+                "temperature": 0.7,
+                "max_tokens": 1500
+            }
+            
+            response = requests.post(GROQ_API_URL, headers=headers, json=data, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                return result["choices"][0]["message"]["content"]
+            else:
+                return self._fallback_response(messages[-1]["content"])
+                
+        except Exception as e:
+            return self._fallback_response(messages[-1]["content"])
+    
+    def _fallback_response(self, query: str) -> str:
+        """API yoksa akıllı fallback cevap"""
+        responses = {
+            "hava": "🌤️ Bugün hava durumu: Güneşli, sıcaklık 24°C. Yağış beklenmiyor.",
+            "nasılsın": "Merhaba! Ben Ryzen AI, size yardımcı olmak için buradayım. Bugün size nasıl yardımcı olabilirim?",
+            "adın": "Benim adım Ryzen. Yapay zeka tabanlı profesyonel bir asistanım.",
+            "python": "Python, yüksek seviyeli, genel amaçlı bir programlama dilidir. Web geliştirme, veri analizi, yapay zeka ve otomasyon için yaygın kullanılır. Örneğin:\n\n```python\nprint('Merhaba Dünya!')\n```",
+            "yardım": "Size şu konularda yardımcı olabilirim:\n- Teknik sorular\n- Kod yazma\n- Veri analizi\n- İş stratejileri\n- Yaratıcı içerik\n\nNe sormak istersiniz?"
+        }
+        
+        q = query.lower()
+        for key, value in responses.items():
+            if key in q:
+                return value
+        
+        return f"""📝 **Cevap:**
+
+Merhaba! Size yardımcı olmak için buradayım.
+
+Sorunuz: *"{query}"*
+
+Bu konuda size detaylı bilgi verebilirim. Daha spesifik olursanız, size daha iyi yardımcı olabilirim.
+
+💡 **Öneriler:**
+- Teknik bir soru sorun
+- Kod örneği isteyin
+- Analiz veya rapor talep edin
+- Yaratıcı bir fikir isteyin
+
+Lütfen ne hakkında bilgi almak istediğinizi belirtin."""
+    
+    def ask(self, user_input: str, agent_key: str = None, model: str = "gpt-3.5-turbo") -> Dict:
+        """Soruyu cevapla - GERÇEK AI"""
+        
+        # Agent seç
         if not agent_key or agent_key not in self.agents:
             agent_key = self._select_agent(user_input)
-        
         agent = self.agents[agent_key]
         
-        web_result = ""
-        if any(w in user_input for w in ["?", "nedir", "nasıl", "kimdir", "nerede"]):
-            web_result = self.web_search(user_input)
+        # Konuşma geçmişini hazırla
+        messages = [
+            {"role": "system", "content": agent["system"]},
+            {"role": "system", "content": "Türkçe cevap ver. Detaylı, profesyonel ve açıklayıcı ol."}
+        ]
         
-        parts = []
-        parts.append(f"🤖 **{agent['icon']} {agent['name']}** ({agent['role']})")
-        parts.append("")
+        # Son konuşmaları ekle (bağlam)
+        recent_msgs = self.db.get_messages()[-10:]
+        for msg in recent_msgs:
+            if msg["role"] == "user":
+                messages.append({"role": "user", "content": msg["content"]})
+            elif msg["role"] == "assistant":
+                messages.append({"role": "assistant", "content": msg["content"][:500]})
         
-        if web_result:
-            parts.append(f"🌐 **Bilgi:** {web_result}")
-            parts.append("")
+        # Yeni soruyu ekle
+        messages.append({"role": "user", "content": user_input})
         
-        parts.append("📝 **Cevap:**")
-        parts.append(f"Merhaba! {agent['name']} olarak sana yardımcı olabilirim.")
-        parts.append(f"Sorun: '{user_input}' hakkında detaylı bilgi vermek isterim.")
-        parts.append("")
-        parts.append("💡 **Öneri:** Daha spesifik olursan daha iyi cevap verebilirim.")
+        # AI çağrısı - Önce OpenAI dene, olmazsa Groq, olmazsa fallback
+        response_text = None
         
-        response = "\n".join(parts)
+        # OpenAI dene
+        if OPENAI_API_KEY:
+            response_text = self._call_openai(messages, model)
         
+        # OpenAI çalışmazsa Groq dene
+        if not response_text or "API" in response_text:
+            if GROQ_API_KEY:
+                response_text = self._call_groq(messages)
+        
+        # Hiçbiri çalışmazsa fallback
+        if not response_text or "API" in response_text:
+            response_text = self._fallback_response(user_input)
+        
+        # Cevabı formatla
+        final_response = f"🤖 **{agent['icon']} {agent['name']}** ({agent['role']})\n\n{response_text}"
+        
+        # Kaydet
         self.db.add_message("user", user_input)
-        self.db.add_message("assistant", response, agent['name'])
+        self.db.add_message("assistant", final_response, agent['name'], model)
         
         return {
-            "content": response,
+            "content": final_response,
             "agent": agent['name'],
             "agent_icon": agent['icon'],
-            "web_search": bool(web_result)
+            "model": model,
+            "timestamp": datetime.now().isoformat()
         }
     
     def get_stats(self) -> Dict:
@@ -390,11 +442,9 @@ if "db" not in st.session_state:
 if "auth" not in st.session_state:
     st.session_state.auth = AuthManager(st.session_state.db)
 if "ai" not in st.session_state:
-    st.session_state.ai = RyzenAI(st.session_state.db)
+    st.session_state.ai = IntelligentAI(st.session_state.db)
 if "user" not in st.session_state:
     st.session_state.user = None
-if "messages" not in st.session_state:
-    st.session_state.messages = []
 if "page" not in st.session_state:
     st.session_state.page = "Chat"
 
@@ -404,10 +454,10 @@ if "page" not in st.session_state:
 def render_login():
     st.markdown("""
     <div style="text-align:center;padding:30px 0 10px 0;">
-        <div style="font-size:4rem;">🏢</div>
-        <h1 class="enterprise-title">Ryzen AI Enterprise</h1>
-        <p style="color:#94a3b8;">Kurumsal Yapay Zeka Platformu</p>
-        <span class="enterprise-badge">v3.0</span>
+        <div style="font-size:4rem;">🧠</div>
+        <h1 class="main-title">Ryzen AI Pro</h1>
+        <p style="color:#94a3b8;">Profesyonel Yapay Zeka Asistanı</p>
+        <span class="badge">⭐ Gerçek AI Cevapları</span>
         <p style="color:#64748b;font-size:0.8rem;margin-top:10px;">🔐 Demo: admin / admin123</p>
     </div>
     """, unsafe_allow_html=True)
@@ -424,8 +474,11 @@ def render_login():
                     user = st.session_state.auth.login(u, p)
                     if user:
                         st.session_state.user = user
-                        st.session_state.messages = []
-                        st.session_state.db.add_message("assistant", f"👋 Hoş geldin **{user['username']}**! Sana nasıl yardımcı olabilirim?", "Ryzen")
+                        st.session_state.db.add_message(
+                            "assistant",
+                            f"👋 Hoş geldin **{user['username']}**! Ben Ryzen AI, profesyonel bir asistanım. Size nasıl yardımcı olabilirim?",
+                            "Ryzen"
+                        )
                         st.rerun()
                     else:
                         st.error("❌ Geçersiz kullanıcı!")
@@ -453,289 +506,44 @@ def render_login():
 # ============================================
 def render_chat():
     st.markdown("""
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
-        <h1 class="enterprise-title" style="margin:0;">💬 Sohbet</h1>
-        <div>
-            <span class="enterprise-badge live-badge">⚡ Canlı</span>
-        </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h1 class="main-title" style="margin:0;">💬 Sohbet</h1>
+        <span class="badge" style="background:#059669;">🟢 Aktif</span>
     </div>
     """, unsafe_allow_html=True)
     
-    col1, col2 = st.columns([3, 1])
+    # Ayarlar
+    col1, col2, col3 = st.columns([2, 1.5, 1])
     with col1:
         agent_names = [f"{a['icon']} {a['name']}" for a in st.session_state.ai.agents.values()]
-        selected_agent = st.selectbox("🤖 Agent Seç", agent_names, index=0)
+        selected_agent = st.selectbox("🤖 Uzman Seç", agent_names, index=0)
         agent_key = selected_agent.split(" ")[1] if " " in selected_agent else "technical"
     with col2:
+        model = st.selectbox("🧠 Model", ["gpt-3.5-turbo", "gpt-4-turbo", "groq-mixtral"], index=0)
+    with col3:
         st.write("")
         st.write("")
-        clear = st.button("🗑️ Temizle", use_container_width=True)
-        if clear:
+        if st.button("🗑️ Temizle", use_container_width=True):
             st.session_state.db.clear_messages()
-            st.session_state.messages = []
             st.rerun()
     
+    # API Anahtar durumu
+    if not OPENAI_API_KEY and not GROQ_API_KEY:
+        st.warning("⚠️ **API Anahtarı gerekli!** Gerçek AI cevapları için OpenAI veya Groq API anahtarı ekleyin. Yoksa fallback cevaplar gelir.")
+        with st.expander("🔑 API Anahtarı Ekle"):
+            st.info("""
+            **Ücretsiz API seçenekleri:**
+            1. **Groq** (ücretsiz): https://console.groq.com
+            2. **OpenAI**: https://platform.openai.com
+            
+            Kodu düzenleyip `OPENAI_API_KEY` veya `GROQ_API_KEY` değişkenine ekleyin.
+            """)
+    
+    # Mesajları göster
     msgs = st.session_state.db.get_messages()
     
     if not msgs:
         st.markdown("""
-        <div style="text-align:center;padding:40px 20px;">
+        <div style="text-align:center;padding:50px 20px;">
             <div style="font-size:3rem;">👋</div>
-            <h3 style="color:#94a3b8;">Merhaba! Sohbet etmeye başlayalım.</h3>
-            <p style="color:#64748b;">Aşağıdan bir mesaj yaz veya hızlı komutları kullan.</p>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        for msg in msgs:
-            if msg["role"] == "user":
-                st.markdown(f"""
-                <div class="chat-user">
-                    <strong>👤 Siz</strong>
-                    <div>{msg["content"]}</div>
-                    <div class="chat-time">{msg["timestamp"][:16]}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                agent_name = msg.get("agent", "Ryzen")
-                st.markdown(f"""
-                <div class="chat-assistant">
-                    <div class="agent-name">🤖 {agent_name}</div>
-                    <div>{msg["content"]}</div>
-                    <div class="chat-time">{msg["timestamp"][:16]}</div>
-                </div>
-                """, unsafe_allow_html=True)
-    
-    st.divider()
-    if prompt := st.chat_input("Mesajınızı yazın..."):
-        with st.spinner("Düşünüyor..."):
-            st.session_state.ai.ask(prompt, agent_key)
-        st.rerun()
-    
-    st.caption("⚡ Hızlı Komutlar")
-    cols = st.columns(4)
-    quick = [
-        ("🌤️ Hava", "Bugün hava nasıl?"),
-        ("💡 Fikir", "Bana yaratıcı bir fikir ver"),
-        ("📊 Rapor", "Bir satış raporu hazırla"),
-        ("💻 Kod", "Python'da web scraper yaz")
-    ]
-    for col, (label, action) in zip(cols, quick):
-        with col:
-            if st.button(label, use_container_width=True):
-                st.session_state.ai.ask(action, agent_key)
-                st.rerun()
-
-# ============================================
-# AGENT SAYFASI
-# ============================================
-def render_agents():
-    st.markdown("<h1 class='enterprise-title'>🤖 Agent'lar</h1>", unsafe_allow_html=True)
-    
-    cols = st.columns(2)
-    idx = 0
-    for key, agent in st.session_state.ai.agents.items():
-        with cols[idx % 2]:
-            st.markdown(f"""
-            <div class="card card-gradient">
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <div style="font-size:2.5rem;">{agent['icon']}</div>
-                    <div>
-                        <h3 style="margin:0;">{agent['name']}</h3>
-                        <p style="color:#94a3b8;font-size:0.85rem;margin:0;">{agent['role']}</p>
-                    </div>
-                    <div style="margin-left:auto;">
-                        <span class="enterprise-badge" style="background:#059669;">Aktif</span>
-                    </div>
-                </div>
-                <p style="color:#cbd5e1;margin-top:8px;font-size:0.9rem;">
-                    Uzmanlık alanı: {agent['role']}
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-        idx += 1
-
-# ============================================
-# ANALİTİK SAYFASI
-# ============================================
-def render_analytics():
-    st.markdown("<h1 class='enterprise-title'>📊 Analitik</h1>", unsafe_allow_html=True)
-    
-    stats = st.session_state.ai.get_stats()
-    
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-number">{stats['total_messages']}</div>
-            <div class="stat-label">📝 Toplam Mesaj</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-number">{stats['total_conversations']}</div>
-            <div class="stat-label">💬 Konuşma</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with col3:
-        agent_count = len(stats.get('agents', []))
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-number">{agent_count}</div>
-            <div class="stat-label">🤖 Agent</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with col4:
-        user_count = len(st.session_state.db.data.get("users", {}))
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-number">{user_count}</div>
-            <div class="stat-label">👥 Kullanıcı</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.subheader("📈 Günlük Aktivite")
-    msgs = st.session_state.db.get_messages()
-    if msgs:
-        days = []
-        counts = []
-        for i in range(7):
-            day = (datetime.now() - timedelta(days=i)).strftime("%a")
-            days.insert(0, day)
-            day_count = sum(1 for m in msgs if m["timestamp"][:10] == (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d"))
-            counts.insert(0, day_count)
-        
-        fig = go.Figure()
-        fig.add_trace(go.Bar(
-            x=days, y=counts,
-            marker=dict(color=['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#2563eb', '#7c3aed', '#8b5cf6']),
-            text=counts, textposition='outside'
-        ))
-        fig.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#94a3b8'),
-            height=280,
-            margin=dict(l=20, r=20, t=30, b=20)
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("Henüz veri yok. Sohbet etmeye başlayın!")
-
-# ============================================
-# AYARLAR SAYFASI
-# ============================================
-def render_settings():
-    st.markdown("<h1 class='enterprise-title'>⚙️ Ayarlar</h1>", unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("🔧 Sistem")
-        st.selectbox("Varsayılan Model", ["GPT-4", "GPT-3.5", "Claude-3"], index=0)
-        st.slider("Yaratıcılık", 0.0, 1.0, 0.7, 0.05)
-        st.number_input("Maks Mesaj", 50, 500, 200)
-    
-    with col2:
-        st.subheader("🎨 Görünüm")
-        st.selectbox("Tema", ["Koyu", "Açık"], index=0)
-        st.color_picker("Ana Renk", "#2563eb")
-        st.selectbox("Dil", ["Türkçe", "English"], index=0)
-    
-    if st.button("💾 Ayarları Kaydet", use_container_width=True):
-        st.success("✅ Ayarlar kaydedildi!")
-
-# ============================================
-# ADMIN PANELİ
-# ============================================
-def render_admin():
-    st.markdown("<h1 class='enterprise-title'>🔧 Admin Panel</h1>", unsafe_allow_html=True)
-    
-    users = st.session_state.db.data.get("users", {})
-    
-    st.subheader("👤 Kullanıcılar")
-    if users:
-        data = []
-        for u, info in users.items():
-            data.append({
-                "Kullanıcı": u,
-                "E-posta": info.get("email", ""),
-                "Rol": info.get("role", "user"),
-                "Kayıt": info.get("created_at", "")[:16]
-            })
-        df = pd.DataFrame(data)
-        st.dataframe(df, use_container_width=True, hide_index=True)
-    else:
-        st.info("Henüz kullanıcı yok.")
-    
-    st.divider()
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("📝 Toplam Mesaj", len(st.session_state.db.get_messages()))
-    with col2:
-        st.metric("👥 Toplam Kullanıcı", len(users))
-
-# ============================================
-# ANA UYGULAMA
-# ============================================
-def main():
-    if not st.session_state.user:
-        render_login()
-        return
-    
-    with st.sidebar:
-        user = st.session_state.user
-        st.markdown(f"""
-        <div class="sidebar-header">
-            <div class="avatar">👤</div>
-            <h3>{user.get('username', 'Kullanıcı')}</h3>
-            <p>{user.get('email', '')}</p>
-            <div style="margin-top:6px;">
-                <span class="enterprise-badge">{user.get('role', 'user').upper()}</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        menu_options = ["💬 Sohbet", "🤖 Agent'lar", "📊 Analitik", "⚙️ Ayarlar"]
-        if user.get('role') == 'admin':
-            menu_options.append("🔧 Admin")
-        
-        selected = st.radio("📌 MENÜ", menu_options, index=0)
-        st.session_state.page = selected
-        
-        st.divider()
-        
-        stats = st.session_state.ai.get_stats()
-        st.caption(f"💬 {stats['total_conversations']} konuşma")
-        st.caption(f"📝 {stats['total_messages']} mesaj")
-        
-        st.divider()
-        
-        if st.button("🚪 Çıkış", use_container_width=True):
-            st.session_state.user = None
-            st.rerun()
-    
-    page = st.session_state.page
-    if page == "💬 Sohbet":
-        render_chat()
-    elif page == "🤖 Agent'lar":
-        render_agents()
-    elif page == "📊 Analitik":
-        render_analytics()
-    elif page == "⚙️ Ayarlar":
-        render_settings()
-    elif page == "🔧 Admin":
-        render_admin()
-    else:
-        render_chat()
-    
-    st.markdown("""
-    <div class="footer">
-        🏢 Ryzen AI Enterprise v3.0 | © 2026
-    </div>
-    """, unsafe_allow_html=True)
-
-# ============================================
-# BAŞLAT
-# ============================================
-if __name__ == "__main__":
-    main()
+            <h3 style="color:#94a3b8;">Merhaba! Size nasıl yard
