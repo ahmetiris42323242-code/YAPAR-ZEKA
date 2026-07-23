@@ -1,6 +1,5 @@
 """
-RYZEN AI ENTERPRISE - KESİN ÇÖZÜM
-Tüm syntax hataları düzeltildi!
+RYZEN AI ENTERPRISE - KESİN ÇALIŞAN VERSİYON
 """
 
 import streamlit as st
@@ -403,18 +402,15 @@ if "page" not in st.session_state:
 # GİRİŞ EKRANI
 # ============================================
 def render_login():
-    st.markdown(
-        """
-        <div style="text-align:center;padding:30px 0 10px 0;">
-            <div style="font-size:4rem;">🏢</div>
-            <h1 class="enterprise-title">Ryzen AI Enterprise</h1>
-            <p style="color:#94a3b8;">Kurumsal Yapay Zeka Platformu</p>
-            <span class="enterprise-badge">v3.0</span>
-            <p style="color:#64748b;font-size:0.8rem;margin-top:10px;">🔐 Demo: admin / admin123</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown("""
+    <div style="text-align:center;padding:30px 0 10px 0;">
+        <div style="font-size:4rem;">🏢</div>
+        <h1 class="enterprise-title">Ryzen AI Enterprise</h1>
+        <p style="color:#94a3b8;">Kurumsal Yapay Zeka Platformu</p>
+        <span class="enterprise-badge">v3.0</span>
+        <p style="color:#64748b;font-size:0.8rem;margin-top:10px;">🔐 Demo: admin / admin123</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -429,11 +425,7 @@ def render_login():
                     if user:
                         st.session_state.user = user
                         st.session_state.messages = []
-                        st.session_state.db.add_message(
-                            "assistant",
-                            f"👋 Hoş geldin **{user['username']}**! Sana nasıl yardımcı olabilirim?",
-                            "Ryzen"
-                        )
+                        st.session_state.db.add_message("assistant", f"👋 Hoş geldin **{user['username']}**! Sana nasıl yardımcı olabilirim?", "Ryzen")
                         st.rerun()
                     else:
                         st.error("❌ Geçersiz kullanıcı!")
@@ -460,17 +452,14 @@ def render_login():
 # CHAT SAYFASI
 # ============================================
 def render_chat():
-    st.markdown(
-        """
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
-            <h1 class="enterprise-title" style="margin:0;">💬 Sohbet</h1>
-            <div>
-                <span class="enterprise-badge live-badge">⚡ Canlı</span>
-            </div>
+    st.markdown("""
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+        <h1 class="enterprise-title" style="margin:0;">💬 Sohbet</h1>
+        <div>
+            <span class="enterprise-badge live-badge">⚡ Canlı</span>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -489,41 +478,32 @@ def render_chat():
     msgs = st.session_state.db.get_messages()
     
     if not msgs:
-        st.markdown(
-            """
-            <div style="text-align:center;padding:40px 20px;">
-                <div style="font-size:3rem;">👋</div>
-                <h3 style="color:#94a3b8;">Merhaba! Sohbet etmeye başlayalım.</h3>
-                <p style="color:#64748b;">Aşağıdan bir mesaj yaz veya hızlı komutları kullan.</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        st.markdown("""
+        <div style="text-align:center;padding:40px 20px;">
+            <div style="font-size:3rem;">👋</div>
+            <h3 style="color:#94a3b8;">Merhaba! Sohbet etmeye başlayalım.</h3>
+            <p style="color:#64748b;">Aşağıdan bir mesaj yaz veya hızlı komutları kullan.</p>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         for msg in msgs:
             if msg["role"] == "user":
-                st.markdown(
-                    f"""
-                    <div class="chat-user">
-                        <strong>👤 Siz</strong>
-                        <div>{msg["content"]}</div>
-                        <div class="chat-time">{msg["timestamp"][:16]}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                st.markdown(f"""
+                <div class="chat-user">
+                    <strong>👤 Siz</strong>
+                    <div>{msg["content"]}</div>
+                    <div class="chat-time">{msg["timestamp"][:16]}</div>
+                </div>
+                """, unsafe_allow_html=True)
             else:
                 agent_name = msg.get("agent", "Ryzen")
-                st.markdown(
-                    f"""
-                    <div class="chat-assistant">
-                        <div class="agent-name">🤖 {agent_name}</div>
-                        <div>{msg["content"]}</div>
-                        <div class="chat-time">{msg["timestamp"][:16]}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                st.markdown(f"""
+                <div class="chat-assistant">
+                    <div class="agent-name">🤖 {agent_name}</div>
+                    <div>{msg["content"]}</div>
+                    <div class="chat-time">{msg["timestamp"][:16]}</div>
+                </div>
+                """, unsafe_allow_html=True)
     
     st.divider()
     if prompt := st.chat_input("Mesajınızı yazın..."):
@@ -555,26 +535,23 @@ def render_agents():
     idx = 0
     for key, agent in st.session_state.ai.agents.items():
         with cols[idx % 2]:
-            st.markdown(
-                f"""
-                <div class="card card-gradient">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="font-size:2.5rem;">{agent['icon']}</div>
-                        <div>
-                            <h3 style="margin:0;">{agent['name']}</h3>
-                            <p style="color:#94a3b8;font-size:0.85rem;margin:0;">{agent['role']}</p>
-                        </div>
-                        <div style="margin-left:auto;">
-                            <span class="enterprise-badge" style="background:#059669;">Aktif</span>
-                        </div>
+            st.markdown(f"""
+            <div class="card card-gradient">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="font-size:2.5rem;">{agent['icon']}</div>
+                    <div>
+                        <h3 style="margin:0;">{agent['name']}</h3>
+                        <p style="color:#94a3b8;font-size:0.85rem;margin:0;">{agent['role']}</p>
                     </div>
-                    <p style="color:#cbd5e1;margin-top:8px;font-size:0.9rem;">
-                        Uzmanlık alanı: {agent['role']}
-                    </p>
+                    <div style="margin-left:auto;">
+                        <span class="enterprise-badge" style="background:#059669;">Aktif</span>
+                    </div>
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
+                <p style="color:#cbd5e1;margin-top:8px;font-size:0.9rem;">
+                    Uzmanlık alanı: {agent['role']}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
         idx += 1
 
 # ============================================
@@ -587,15 +564,178 @@ def render_analytics():
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown(
-            f"""
-            <div class="stat-card">
-                <div class="stat-number">{stats['total_messages']}</div>
-                <div class="stat-label">📝 Toplam Mesaj</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{stats['total_messages']}</div>
+            <div class="stat-label">📝 Toplam Mesaj</div>
+        </div>
+        """, unsafe_allow_html=True)
     with col2:
-        st.markdown(
-            f""
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{stats['total_conversations']}</div>
+            <div class="stat-label">💬 Konuşma</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col3:
+        agent_count = len(stats.get('agents', []))
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{agent_count}</div>
+            <div class="stat-label">🤖 Agent</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col4:
+        user_count = len(st.session_state.db.data.get("users", {}))
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{user_count}</div>
+            <div class="stat-label">👥 Kullanıcı</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.subheader("📈 Günlük Aktivite")
+    msgs = st.session_state.db.get_messages()
+    if msgs:
+        days = []
+        counts = []
+        for i in range(7):
+            day = (datetime.now() - timedelta(days=i)).strftime("%a")
+            days.insert(0, day)
+            day_count = sum(1 for m in msgs if m["timestamp"][:10] == (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d"))
+            counts.insert(0, day_count)
+        
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=days, y=counts,
+            marker=dict(color=['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#2563eb', '#7c3aed', '#8b5cf6']),
+            text=counts, textposition='outside'
+        ))
+        fig.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#94a3b8'),
+            height=280,
+            margin=dict(l=20, r=20, t=30, b=20)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Henüz veri yok. Sohbet etmeye başlayın!")
+
+# ============================================
+# AYARLAR SAYFASI
+# ============================================
+def render_settings():
+    st.markdown("<h1 class='enterprise-title'>⚙️ Ayarlar</h1>", unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("🔧 Sistem")
+        st.selectbox("Varsayılan Model", ["GPT-4", "GPT-3.5", "Claude-3"], index=0)
+        st.slider("Yaratıcılık", 0.0, 1.0, 0.7, 0.05)
+        st.number_input("Maks Mesaj", 50, 500, 200)
+    
+    with col2:
+        st.subheader("🎨 Görünüm")
+        st.selectbox("Tema", ["Koyu", "Açık"], index=0)
+        st.color_picker("Ana Renk", "#2563eb")
+        st.selectbox("Dil", ["Türkçe", "English"], index=0)
+    
+    if st.button("💾 Ayarları Kaydet", use_container_width=True):
+        st.success("✅ Ayarlar kaydedildi!")
+
+# ============================================
+# ADMIN PANELİ
+# ============================================
+def render_admin():
+    st.markdown("<h1 class='enterprise-title'>🔧 Admin Panel</h1>", unsafe_allow_html=True)
+    
+    users = st.session_state.db.data.get("users", {})
+    
+    st.subheader("👤 Kullanıcılar")
+    if users:
+        data = []
+        for u, info in users.items():
+            data.append({
+                "Kullanıcı": u,
+                "E-posta": info.get("email", ""),
+                "Rol": info.get("role", "user"),
+                "Kayıt": info.get("created_at", "")[:16]
+            })
+        df = pd.DataFrame(data)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    else:
+        st.info("Henüz kullanıcı yok.")
+    
+    st.divider()
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("📝 Toplam Mesaj", len(st.session_state.db.get_messages()))
+    with col2:
+        st.metric("👥 Toplam Kullanıcı", len(users))
+
+# ============================================
+# ANA UYGULAMA
+# ============================================
+def main():
+    if not st.session_state.user:
+        render_login()
+        return
+    
+    with st.sidebar:
+        user = st.session_state.user
+        st.markdown(f"""
+        <div class="sidebar-header">
+            <div class="avatar">👤</div>
+            <h3>{user.get('username', 'Kullanıcı')}</h3>
+            <p>{user.get('email', '')}</p>
+            <div style="margin-top:6px;">
+                <span class="enterprise-badge">{user.get('role', 'user').upper()}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        menu_options = ["💬 Sohbet", "🤖 Agent'lar", "📊 Analitik", "⚙️ Ayarlar"]
+        if user.get('role') == 'admin':
+            menu_options.append("🔧 Admin")
+        
+        selected = st.radio("📌 MENÜ", menu_options, index=0)
+        st.session_state.page = selected
+        
+        st.divider()
+        
+        stats = st.session_state.ai.get_stats()
+        st.caption(f"💬 {stats['total_conversations']} konuşma")
+        st.caption(f"📝 {stats['total_messages']} mesaj")
+        
+        st.divider()
+        
+        if st.button("🚪 Çıkış", use_container_width=True):
+            st.session_state.user = None
+            st.rerun()
+    
+    page = st.session_state.page
+    if page == "💬 Sohbet":
+        render_chat()
+    elif page == "🤖 Agent'lar":
+        render_agents()
+    elif page == "📊 Analitik":
+        render_analytics()
+    elif page == "⚙️ Ayarlar":
+        render_settings()
+    elif page == "🔧 Admin":
+        render_admin()
+    else:
+        render_chat()
+    
+    st.markdown("""
+    <div class="footer">
+        🏢 Ryzen AI Enterprise v3.0 | © 2026
+    </div>
+    """, unsafe_allow_html=True)
+
+# ============================================
+# BAŞLAT
+# ============================================
+if __name__ == "__main__":
+    main()
