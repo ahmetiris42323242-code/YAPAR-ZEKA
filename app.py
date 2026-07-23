@@ -1,9 +1,10 @@
 """
-RYZEN AI ENTERPRISE - DÜZELTİLMİŞ VERSİYON
+RYZEN AI ENTERPRISE - SON HAL
+Tüm hatalar düzeltildi!
 """
 
 import streamlit as st
-import os  # <--- EKLENDI!
+import os
 import json
 import hashlib
 import random
@@ -20,14 +21,14 @@ import plotly.graph_objects as go
 # SAYFA KONFIGÜRASYONU
 # ============================================
 st.set_page_config(
-    page_title="🏢 Ryzen AI Enterprise",
+    page_title="Ryzen AI Enterprise",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ============================================
-# CSS - KURUMSAL TEMA
+# CSS
 # ============================================
 st.markdown("""
 <style>
@@ -35,10 +36,7 @@ st.markdown("""
         --primary: #2563eb;
         --secondary: #7c3aed;
         --success: #059669;
-        --danger: #dc2626;
         --dark: #0f172a;
-        --dark-card: #1e293b;
-        --light: #f8fafc;
         --gray: #94a3b8;
     }
     
@@ -50,7 +48,6 @@ st.markdown("""
         font-weight: 800;
         text-align: center;
         padding: 10px 0;
-        letter-spacing: -0.5px;
     }
     
     .enterprise-badge {
@@ -62,7 +59,6 @@ st.markdown("""
         font-size: 0.7rem;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
     }
     
     .live-badge {
@@ -76,7 +72,6 @@ st.markdown("""
     
     .card {
         background: rgba(255,255,255,0.03);
-        backdrop-filter: blur(10px);
         border-radius: 16px;
         padding: 20px;
         border: 1px solid rgba(255,255,255,0.06);
@@ -87,7 +82,6 @@ st.markdown("""
     .card:hover {
         transform: translateY(-2px);
         box-shadow: 0 8px 30px rgba(37, 99, 235, 0.15);
-        border-color: rgba(37, 99, 235, 0.3);
     }
     
     .card-gradient {
@@ -102,7 +96,6 @@ st.markdown("""
         padding: 14px 20px;
         margin: 8px 0 8px auto;
         max-width: 75%;
-        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
         animation: slideInRight 0.3s ease;
         word-wrap: break-word;
     }
@@ -330,7 +323,7 @@ class RyzenAI:
             parts.append(f"🌐 **Bilgi:** {web_result}")
             parts.append("")
         
-        parts.append(f"📝 **Cevap:**")
+        parts.append("📝 **Cevap:**")
         parts.append(f"Merhaba! {agent['name']} olarak sana yardımcı olabilirim.")
         parts.append(f"Sorun: '{user_input}' hakkında detaylı bilgi vermek isterim.")
         parts.append("")
@@ -540,7 +533,8 @@ def render_agents():
     st.markdown("<h1 class='enterprise-title'>🤖 Agent'lar</h1>", unsafe_allow_html=True)
     
     cols = st.columns(2)
-    for idx, (key, agent) in enumerate(st.session_state.ai.agents.items()):
+    idx = 0
+    for key, agent in st.session_state.ai.agents.items():
         with cols[idx % 2]:
             st.markdown(f"""
             <div class="card card-gradient">
@@ -559,6 +553,7 @@ def render_agents():
                 </p>
             </div>
             """, unsafe_allow_html=True)
+        idx += 1
 
 # ============================================
 # ANALİTİK SAYFASI
@@ -584,6 +579,14 @@ def render_analytics():
         </div>
         """, unsafe_allow_html=True)
     with col3:
+        agent_count = len(stats.get('agents', []))
         st.markdown(f"""
         <div class="stat-card">
-            <div class="stat-number">{len
+            <div class="stat-number">{agent_count}</div>
+            <div class="stat-label">🤖 Agent</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col4:
+        user_count = len(st.session_state.db.data.get("users", {}))
+        st.markdown(f"""
+        <div class="s
