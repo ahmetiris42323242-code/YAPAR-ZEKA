@@ -1,32 +1,24 @@
 """
-RYZEN AI ENTERPRISE - TEK DOSYA KURUMSAL ASİSTAN
+RYZEN AI ENTERPRISE - PROFESYONEL TEK DOSYA
 Versiyon: 3.0.0
-Tüm özellikler tek dosyada!
+Tüm özellikler tek dosyada - Bomboş ekran yok!
 """
 
 import streamlit as st
-import os
 import json
 import hashlib
+import random
 import time
 import re
-import asyncio
-import base64
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional, Tuple
-from dataclasses import dataclass, field
+from typing import List, Dict, Any, Optional
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import random
-import string
-from io import BytesIO, StringIO
-import csv
 
 # ============================================
-# SAYFA KONFIGÜRASYONU
+# SAYFA KONFIGÜRASYONU - İLK SATIR OLMALI!
 # ============================================
 st.set_page_config(
     page_title="🏢 Ryzen AI Enterprise",
@@ -36,33 +28,36 @@ st.set_page_config(
 )
 
 # ============================================
-# CSS - KURUMSAL TEMA
+# CSS - PROFESYONEL KURUMSAL TEMA
 # ============================================
 st.markdown("""
 <style>
     /* ===== KURUMSAL RENKLER ===== */
     :root {
         --primary: #2563eb;
-        --primary-dark: #1d4ed8;
         --secondary: #7c3aed;
         --success: #059669;
         --danger: #dc2626;
-        --warning: #d97706;
         --dark: #0f172a;
-        --dark-secondary: #1e293b;
+        --dark-card: #1e293b;
         --light: #f8fafc;
         --gray: #94a3b8;
     }
     
-    /* ===== BAŞLIKLAR ===== */
+    /* ===== GENEL ===== */
+    .main {
+        padding: 0 10px;
+    }
+    
+    /* ===== BAŞLIK ===== */
     .enterprise-title {
         background: linear-gradient(135deg, var(--primary), var(--secondary));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 2.8rem;
+        font-size: 2.5rem;
         font-weight: 800;
         text-align: center;
-        padding: 1rem 0;
+        padding: 10px 0;
         letter-spacing: -0.5px;
     }
     
@@ -72,17 +67,19 @@ st.markdown("""
         color: white;
         padding: 4px 16px;
         border-radius: 20px;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         font-weight: 600;
-        letter-spacing: 0.5px;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     
-    .section-title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin: 1.5rem 0 1rem 0;
-        color: var(--light);
+    .live-badge {
+        animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
     }
     
     /* ===== KARTLAR ===== */
@@ -97,14 +94,14 @@ st.markdown("""
     }
     
     .card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 40px rgba(37, 99, 235, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(37, 99, 235, 0.15);
         border-color: rgba(37, 99, 235, 0.3);
     }
     
     .card-gradient {
-        background: linear-gradient(135deg, rgba(37,99,235,0.1), rgba(124,58,237,0.1));
-        border: 1px solid rgba(37,99,235,0.2);
+        background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(124,58,237,0.08));
+        border: 1px solid rgba(37,99,235,0.15);
     }
     
     /* ===== CHAT MESAJLARI ===== */
@@ -112,33 +109,53 @@ st.markdown("""
         background: linear-gradient(135deg, var(--primary), var(--secondary));
         color: white;
         border-radius: 18px 18px 4px 18px;
-        padding: 14px 22px;
+        padding: 14px 20px;
         margin: 8px 0 8px auto;
         max-width: 75%;
         box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
         animation: slideInRight 0.3s ease;
+        word-wrap: break-word;
     }
     
     .chat-assistant {
         background: rgba(255,255,255,0.06);
         border: 1px solid rgba(255,255,255,0.08);
         border-radius: 18px 18px 18px 4px;
-        padding: 14px 22px;
+        padding: 14px 20px;
         margin: 8px auto 8px 0;
         max-width: 75%;
         animation: slideInLeft 0.3s ease;
+        word-wrap: break-word;
     }
     
     .chat-assistant .agent-name {
-        color: var(--secondary);
+        color: #a78bfa;
         font-weight: 600;
         font-size: 0.85rem;
+        margin-bottom: 6px;
+    }
+    
+    .chat-time {
+        font-size: 0.6rem;
+        color: #64748b;
+        margin-top: 6px;
+        text-align: right;
+    }
+    
+    @keyframes slideInRight {
+        from { opacity: 0; transform: translateX(30px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    
+    @keyframes slideInLeft {
+        from { opacity: 0; transform: translateX(-30px); }
+        to { opacity: 1; transform: translateX(0); }
     }
     
     /* ===== SIDEBAR ===== */
     .sidebar-header {
         background: linear-gradient(135deg, var(--primary), var(--secondary));
-        padding: 24px 20px;
+        padding: 20px;
         border-radius: 16px;
         text-align: center;
         color: white;
@@ -146,18 +163,19 @@ st.markdown("""
     }
     
     .sidebar-header .avatar {
-        font-size: 3.5rem;
-        margin-bottom: 8px;
+        font-size: 3rem;
+        margin-bottom: 4px;
     }
     
     .sidebar-header h3 {
         margin: 4px 0;
         font-weight: 600;
+        font-size: 1.1rem;
     }
     
     .sidebar-header p {
         opacity: 0.8;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         margin: 0;
     }
     
@@ -168,11 +186,6 @@ st.markdown("""
         padding: 16px 20px;
         text-align: center;
         border: 1px solid rgba(255,255,255,0.05);
-        transition: all 0.3s;
-    }
-    
-    .stat-card:hover {
-        background: rgba(255,255,255,0.06);
     }
     
     .stat-number {
@@ -185,76 +198,44 @@ st.markdown("""
     
     .stat-label {
         color: var(--gray);
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-top: 4px;
     }
     
-    /* ===== BUTONLAR ===== */
-    .btn-primary {
-        background: linear-gradient(135deg, var(--primary), var(--secondary));
-        color: white;
-        border: none;
-        border-radius: 50px;
-        padding: 12px 30px;
-        font-weight: 600;
-        transition: all 0.3s;
-        cursor: pointer;
-        width: 100%;
+    /* ===== FOOTER ===== */
+    .footer {
+        text-align: center;
+        color: #475569;
+        font-size: 0.75rem;
+        padding: 20px 0 10px 0;
+        border-top: 1px solid rgba(255,255,255,0.05);
+        margin-top: 20px;
     }
     
-    .btn-primary:hover {
-        transform: scale(1.02);
-        box-shadow: 0 10px 30px rgba(37, 99, 235, 0.4);
-    }
-    
-    .btn-outline {
-        background: transparent;
-        border: 2px solid var(--primary);
-        color: var(--primary);
-        border-radius: 50px;
-        padding: 10px 28px;
-        font-weight: 600;
-        transition: all 0.3s;
-        cursor: pointer;
-        width: 100%;
-    }
-    
-    .btn-outline:hover {
-        background: var(--primary);
-        color: white;
-    }
-    
-    /* ===== ANİMASYONLAR ===== */
-    @keyframes slideInRight {
-        from { opacity: 0; transform: translateX(30px); }
-        to { opacity: 1; transform: translateX(0); }
-    }
-    
-    @keyframes slideInLeft {
-        from { opacity: 0; transform: translateX(-30px); }
-        to { opacity: 1; transform: translateX(0); }
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-    
-    .fade-in {
-        animation: fadeIn 0.5s ease;
+    /* ===== MOBİL UYUM ===== */
+    @media (max-width: 768px) {
+        .enterprise-title {
+            font-size: 1.8rem;
+        }
+        .chat-user, .chat-assistant {
+            max-width: 90%;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+        }
+        .stat-number {
+            font-size: 1.5rem;
+        }
+        .sidebar-header h3 {
+            font-size: 0.95rem;
+        }
     }
     
     /* ===== SCROLLBAR ===== */
     ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+        width: 4px;
+        height: 4px;
     }
     ::-webkit-scrollbar-track {
         background: var(--dark);
@@ -263,125 +244,16 @@ st.markdown("""
         background: linear-gradient(180deg, var(--primary), var(--secondary));
         border-radius: 10px;
     }
-    
-    /* ===== RESPONSIVE ===== */
-    @media (max-width: 768px) {
-        .enterprise-title {
-            font-size: 1.8rem;
-        }
-        .chat-user, .chat-assistant {
-            max-width: 90%;
-        }
-        .stat-number {
-            font-size: 1.5rem;
-        }
-    }
-    
-    /* ===== BADGE ANIMASYON ===== */
-    .live-badge {
-        animation: pulse 1.5s infinite;
-        display: inline-block;
-    }
-    
-    /* ===== TAB MENU ===== */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background: rgba(255,255,255,0.03);
-        border-radius: 12px;
-        padding: 6px;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 8px;
-        padding: 8px 20px;
-        transition: all 0.3s;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, var(--primary), var(--secondary));
-        color: white !important;
-    }
-    
-    /* ===== METRIK ===== */
-    .stMetric {
-        background: rgba(255,255,255,0.03);
-        border-radius: 12px;
-        padding: 12px;
-        border: 1px solid rgba(255,255,255,0.05);
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================
-# VERİ MODELLERİ
-# ============================================
-@dataclass
-class User:
-    id: str
-    username: str
-    email: str
-    password_hash: str
-    role: str = "user"
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    last_login: Optional[str] = None
-    preferences: Dict = field(default_factory=dict)
-
-@dataclass
-class Message:
-    id: str
-    conversation_id: str
-    role: str
-    content: str
-    agent: Optional[str] = None
-    model: Optional[str] = None
-    tokens: int = 0
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-
-@dataclass
-class Conversation:
-    id: str
-    user_id: str
-    title: str
-    messages: List[Message] = field(default_factory=list)
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
-
-@dataclass
-class Document:
-    id: str
-    user_id: str
-    name: str
-    content: str
-    type: str
-    chunks: int = 0
-    uploaded_at: str = field(default_factory=lambda: datetime.now().isoformat())
-
-@dataclass
-class Agent:
-    name: str
-    role: str
-    description: str
-    icon: str
-    system_prompt: str
-    temperature: float = 0.7
-    is_active: bool = True
-
-# ============================================
-# VERİTABANI (İN-MEMORY)
+# VERİTABANI (JSON PERSISTENCE)
 # ============================================
 class Database:
-    """In-memory veritabanı - JSON ile persistence"""
-    
-    def __init__(self, db_file="enterprise_db.json"):
+    def __init__(self, db_file="ryzen_db.json"):
         self.db_file = db_file
-        self.data = {
-            "users": {},
-            "conversations": {},
-            "messages": {},
-            "documents": {},
-            "feedback": {},
-            "analytics": {}
-        }
+        self.data = {"users": {}, "messages": [], "settings": {}}
         self.load()
     
     def load(self):
@@ -390,278 +262,333 @@ class Database:
                 with open(self.db_file, 'r', encoding='utf-8') as f:
                     self.data = json.load(f)
             except:
-                pass
+                self.data = {"users": {}, "messages": [], "settings": {}}
+        self.save()
     
     def save(self):
         with open(self.db_file, 'w', encoding='utf-8') as f:
             json.dump(self.data, f, ensure_ascii=False, indent=2)
     
-    def get(self, collection: str, key: str):
-        return self.data.get(collection, {}).get(key)
+    def get_messages(self):
+        return self.data.get("messages", [])
     
-    def set(self, collection: str, key: str, value: Any):
-        if collection not in self.data:
-            self.data[collection] = {}
-        self.data[collection][key] = value
+    def add_message(self, role: str, content: str, agent: str = None):
+        msg = {
+            "role": role,
+            "content": content,
+            "agent": agent,
+            "timestamp": datetime.now().isoformat()
+        }
+        self.data["messages"].append(msg)
+        if len(self.data["messages"]) > 200:
+            self.data["messages"] = self.data["messages"][-200:]
         self.save()
+        return msg
     
-    def delete(self, collection: str, key: str):
-        if collection in self.data and key in self.data[collection]:
-            del self.data[collection][key]
-            self.save()
-    
-    def list(self, collection: str) -> List[Dict]:
-        return list(self.data.get(collection, {}).values())
-    
-    def find(self, collection: str, **filters) -> List[Dict]:
-        items = self.data.get(collection, {}).values()
-        result = []
-        for item in items:
-            match = True
-            for key, value in filters.items():
-                if item.get(key) != value:
-                    match = False
-                    break
-            if match:
-                result.append(item)
-        return result
-    
-    def count(self, collection: str) -> int:
-        return len(self.data.get(collection, {}))
+    def clear_messages(self):
+        self.data["messages"] = []
+        self.save()
 
 # ============================================
-# YAPAY ZEKA ÇEKİRDEĞİ
+# AI MOTORU
 # ============================================
 class RyzenAI:
-    """Ana AI Motoru - Multi-Agent, RAG, Memory"""
-    
     def __init__(self, db: Database):
         self.db = db
         self.name = "Ryzen"
-        self.agents = self._init_agents()
-        self.memory_file = "memory.json"
-        self.memory = self._load_memory()
-    
-    def _init_agents(self) -> Dict[str, Agent]:
-        return {
-            "technical": Agent(
-                name="TechPro",
-                role="Teknik Uzman",
-                description="Kod, sistem, veri yapıları ve teknoloji çözümleri",
-                icon="💻",
-                system_prompt="Sen bir teknoloji uzmanısın. Kod yaz, hata ayıkla, sistem tasarla.",
-                temperature=0.3
-            ),
-            "creative": Agent(
-                name="CreativeMind",
-                role="Yaratıcı Yazar",
-                description="İçerik, şiir, hikaye ve yaratıcı fikirler",
-                icon="🎨",
-                system_prompt="Sen yaratıcı bir yazarsın. İlham verici, özgün ve etkileyici içerikler üret.",
-                temperature=0.9
-            ),
-            "analyst": Agent(
-                name="DataAnalyst",
-                role="Veri Analisti",
-                description="Veri analizi, raporlama, istatistik ve içgörüler",
-                icon="📊",
-                system_prompt="Sen bir veri analisti uzmanısın. Verileri yorumla, grafikler oluştur.",
-                temperature=0.4
-            ),
-            "business": Agent(
-                name="BizPro",
-                role="İş Danışmanı",
-                description="Strateji, pazarlama, yönetim ve iş geliştirme",
-                icon="💼",
-                system_prompt="Sen bir iş danışmanısın. Stratejik tavsiyeler ver, iş planları oluştur.",
-                temperature=0.6
-            )
+        self.agents = {
+            "technical": {"name": "TechPro", "role": "Teknik Uzman", "icon": "💻", "temp": 0.3},
+            "creative": {"name": "CreativeMind", "role": "Yaratıcı Yazar", "icon": "🎨", "temp": 0.9},
+            "analyst": {"name": "DataAnalyst", "role": "Veri Analisti", "icon": "📊", "temp": 0.4},
+            "business": {"name": "BizPro", "role": "İş Danışmanı", "icon": "💼", "temp": 0.6}
         }
     
-    def _load_memory(self) -> List[Dict]:
-        if os.path.exists(self.memory_file):
-            try:
-                with open(self.memory_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except:
-                return []
-        return []
-    
-    def _save_memory(self):
-        with open(self.memory_file, 'w', encoding='utf-8') as f:
-            json.dump(self.memory, f, ensure_ascii=False, indent=2)
-    
-    def _select_agent(self, query: str) -> Agent:
-        """Soruya göre en uygun agent'ı seç"""
+    def _select_agent(self, query: str) -> str:
         q = query.lower()
-        
-        # Teknik
-        if any(w in q for w in ["kod", "python", "sistem", "hata", "çözüm", "teknoloji", "server", "api"]):
-            return self.agents["technical"]
-        
-        # Yaratıcı
-        if any(w in q for w in ["şiir", "hikaye", "masal", "yaratıcı", "sanat", "edebiyat", "renk"]):
-            return self.agents["creative"]
-        
-        # Analist
-        if any(w in q for w in ["veri", "istatistik", "grafik", "analiz", "rapor", "sayı", "oran"]):
-            return self.agents["analyst"]
-        
-        # İş
-        if any(w in q for w in ["strateji", "pazarlama", "yönetim", "iş", "satış", "müşteri"]):
-            return self.agents["business"]
-        
-        # Varsayılan
-        return self.agents["technical"]
+        if any(w in q for w in ["kod", "python", "sistem", "hata", "çözüm", "teknoloji"]):
+            return "technical"
+        if any(w in q for w in ["şiir", "hikaye", "yaratıcı", "sanat", "edebiyat"]):
+            return "creative"
+        if any(w in q for w in ["veri", "istatistik", "grafik", "analiz", "rapor"]):
+            return "analyst"
+        if any(w in q for w in ["strateji", "pazarlama", "iş", "satış", "müşteri"]):
+            return "business"
+        return "technical"
     
     def web_search(self, query: str) -> str:
-        """Web araması"""
         try:
             url = f"https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1"
-            response = requests.get(url, timeout=5)
-            data = response.json()
-            
+            r = requests.get(url, timeout=5)
+            data = r.json()
             if data.get('AbstractText'):
-                return data['AbstractText'][:500]
-            
+                return data['AbstractText'][:400]
             if data.get('RelatedTopics'):
-                for topic in data['RelatedTopics'][:3]:
-                    if topic.get('Text'):
-                        return topic['Text'][:300]
-            
-            return "Arama sonucu bulunamadı."
+                for t in data['RelatedTopics'][:2]:
+                    if t.get('Text'):
+                        return t['Text'][:300]
+            return ""
         except:
-            return "Web araması şu anda kullanılamıyor."
+            return ""
     
-    def think(self, problem: str, agent: Agent) -> List[str]:
-        """Düşünce zinciri"""
-        return [
-            f"🎯 {agent.name} olarak problemi analiz ediyorum...",
-            f"📋 Konu: {problem[:60]}...",
-            "🔍 İlgili bağlamı kontrol ediyorum...",
-            "⚡ En iyi yaklaşımı seçiyorum...",
-            "✅ Cevabı oluşturuyorum ve doğruluyorum..."
-        ]
-    
-    def ask(self, user_input: str, agent_name: Optional[str] = None, 
-            model: str = "GPT-4", temperature: float = 0.7) -> Dict:
-        """Soruya cevap üret"""
+    def ask(self, user_input: str, agent_key: str = None) -> Dict:
+        if not agent_key or agent_key not in self.agents:
+            agent_key = self._select_agent(user_input)
         
-        # Agent seçimi
-        if agent_name and agent_name in self.agents:
-            agent = self.agents[agent_name]
-        else:
-            agent = self._select_agent(user_input)
-        
-        # Düşünce zinciri
-        thoughts = self.think(user_input, agent)
+        agent = self.agents[agent_key]
         
         # Web araması
         web_result = ""
         if any(w in user_input for w in ["?", "nedir", "nasıl", "kimdir", "nerede"]):
             web_result = self.web_search(user_input)
         
-        # Hafıza ara
-        memory_context = self._search_memory(user_input)
-        
         # Cevap oluştur
-        response_parts = []
+        parts = []
+        parts.append(f"🤖 **{agent['icon']} {agent['name']}** ({agent['role']})")
+        parts.append("")
         
-        # Agent bilgisi
-        response_parts.append(f"🤖 **{agent.icon} {agent.name}** ({agent.role})\n")
+        if web_result:
+            parts.append(f"🌐 **Bilgi:** {web_result}")
+            parts.append("")
         
-        # Web sonucu
-        if web_result and "bulunamadı" not in web_result and "kullanılamıyor" not in web_result:
-            response_parts.append(f"🌐 **Web Arama Sonucu:**\n{web_result}\n")
+        parts.append(f"📝 **Cevap:**")
+        parts.append(f"Merhaba! {agent['name']} olarak sana yardımcı olabilirim.")
+        parts.append(f"Sorun: '{user_input}' hakkında detaylı bilgi vermek isterim.")
+        parts.append("")
+        parts.append("💡 **Öneri:** Daha spesifik olursan daha iyi cevap verebilirim.")
         
-        # Hafıza
-        if memory_context:
-            response_parts.append(f"📝 **Hafızamdan hatırlıyorum:**\n{memory_context[:200]}...\n")
+        response = "\n".join(parts)
         
-        # Düşünce zinciri
-        response_parts.append("💭 **Düşünce Süreci:**")
-        for t in thoughts:
-            response_parts.append(f"  • {t}")
-        response_parts.append("")
-        
-        # Ana cevap
-        response_parts.append(f"✨ **Cevap:**")
-        response_parts.append(f"Merhaba! {agent.name} olarak sana yardımcı olabilirim. ")
-        response_parts.append(f"Sorun: '{user_input}' hakkında detaylı bilgi vermek isterim.")
-        response_parts.append(f"\n💡 **Öneri:** Daha spesifik olursan daha iyi cevap verebilirim.")
-        
-        response = "\n".join(response_parts)
-        
-        # Hafızaya kaydet
-        self.memory.append({
-            "user": user_input,
-            "ai": response,
-            "agent": agent.name,
-            "model": model,
-            "timestamp": datetime.now().isoformat()
-        })
-        if len(self.memory) > 200:
-            self.memory = self.memory[-200:]
-        self._save_memory()
+        # Kaydet
+        self.db.add_message("user", user_input)
+        self.db.add_message("assistant", response, agent['name'])
         
         return {
             "content": response,
-            "agent": agent.name,
-            "agent_icon": agent.icon,
-            "model": model,
-            "tokens": len(response.split()),
-            "thoughts": thoughts,
-            "web_search": bool(web_result and "bulunamadı" not in web_result),
-            "timestamp": datetime.now().isoformat()
+            "agent": agent['name'],
+            "agent_icon": agent['icon'],
+            "web_search": bool(web_result)
         }
     
-    def _search_memory(self, query: str, limit: int = 3) -> str:
-        """Hafızada ara"""
-        results = []
-        q_words = set(query.lower().split())
-        for entry in reversed(self.memory):
-            text = f"{entry['user']} {entry['ai']}".lower()
-            score = sum(1 for w in q_words if w in text)
-            if score > 0:
-                results.append((score, entry))
-        results.sort(key=lambda x: x[0], reverse=True)
-        
-        if results:
-            context = []
-            for _, entry in results[:limit]:
-                context.append(f"👤 {entry['user'][:80]}")
-                context.append(f"🤖 {entry['ai'][:80]}...")
-            return "\n".join(context)
-        return ""
-    
-    def get_agents(self) -> List[Dict]:
-        """Tüm agent'ları getir"""
-        return [
-            {
-                "name": a.name,
-                "role": a.role,
-                "description": a.description,
-                "icon": a.icon,
-                "is_active": a.is_active
-            }
-            for a in self.agents.values()
-        ]
-    
     def get_stats(self) -> Dict:
-        """İstatistikleri getir"""
+        msgs = self.db.get_messages()
+        user_msgs = [m for m in msgs if m.get("role") == "user"]
+        assistant_msgs = [m for m in msgs if m.get("role") == "assistant"]
         return {
-            "total_conversations": len(self.memory),
-            "last_activity": self.memory[-1]['timestamp'] if self.memory else "Yok",
-            "agents_used": list(set([m.get('agent', 'bilinmiyor') for m in self.memory])),
-            "total_tokens": sum([len(m['ai'].split()) for m in self.memory])
+            "total_messages": len(msgs),
+            "total_conversations": len(user_msgs),
+            "total_responses": len(assistant_msgs),
+            "agents": list(set([m.get("agent") for m in assistant_msgs if m.get("agent")]))
         }
 
 # ============================================
-# AUTHENTICATION
+# AUTH
 # ============================================
 class AuthManager:
-    """Kimlik doğrulama ve yetkilendirme"""
-    
     def __init__(self, db: Database):
         self.db = db
-        self.session_t
+    
+    def login(self, username: str, password: str) -> Optional[Dict]:
+        users = self.db.data.get("users", {})
+        if username not in users:
+            return None
+        user = users[username]
+        pwd_hash = hashlib.sha256(password.encode()).hexdigest()
+        if user.get("password") != pwd_hash:
+            return None
+        return {"username": username, "role": user.get("role", "user"), "email": user.get("email", "")}
+    
+    def register(self, username: str, email: str, password: str) -> Optional[Dict]:
+        users = self.db.data.get("users", {})
+        if username in users:
+            return None
+        users[username] = {
+            "email": email,
+            "password": hashlib.sha256(password.encode()).hexdigest(),
+            "role": "admin" if len(users) == 0 else "user",
+            "created_at": datetime.now().isoformat()
+        }
+        self.db.data["users"] = users
+        self.db.save()
+        return {"username": username, "email": email, "role": users[username]["role"]}
+
+# ============================================
+# OTURUM BAŞLAT
+# ============================================
+if "db" not in st.session_state:
+    st.session_state.db = Database()
+if "auth" not in st.session_state:
+    st.session_state.auth = AuthManager(st.session_state.db)
+if "ai" not in st.session_state:
+    st.session_state.ai = RyzenAI(st.session_state.db)
+if "user" not in st.session_state:
+    st.session_state.user = None
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "page" not in st.session_state:
+    st.session_state.page = "Chat"
+
+# ============================================
+# GİRİŞ EKRANI
+# ============================================
+def render_login():
+    st.markdown("""
+    <div style="text-align:center;padding:30px 0 10px 0;">
+        <div style="font-size:4rem;">🏢</div>
+        <h1 class="enterprise-title">Ryzen AI Enterprise</h1>
+        <p style="color:#94a3b8;">Kurumsal Yapay Zeka Platformu</p>
+        <span class="enterprise-badge">v3.0</span>
+        <p style="color:#64748b;font-size:0.8rem;margin-top:10px;">🔐 Demo: admin / admin123</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        tab1, tab2 = st.tabs(["🔐 Giriş", "📝 Kayıt"])
+        
+        with tab1:
+            with st.form("login"):
+                u = st.text_input("Kullanıcı Adı", placeholder="admin")
+                p = st.text_input("Şifre", type="password", placeholder="••••••••")
+                if st.form_submit_button("Giriş Yap", use_container_width=True):
+                    user = st.session_state.auth.login(u, p)
+                    if user:
+                        st.session_state.user = user
+                        st.session_state.messages = []
+                        # Hoş geldin mesajı
+                        welcome = f"👋 Hoş geldin **{user['username']}**! Sana nasıl yardımcı olabilirim?"
+                        st.session_state.db.add_message("assistant", welcome, "Ryzen")
+                        st.rerun()
+                    else:
+                        st.error("❌ Geçersiz kullanıcı!")
+        
+        with tab2:
+            with st.form("register"):
+                u = st.text_input("Kullanıcı Adı", placeholder="kullanici_adi")
+                e = st.text_input("E-posta", placeholder="ornek@mail.com")
+                p1 = st.text_input("Şifre", type="password", placeholder="••••••••")
+                p2 = st.text_input("Şifre Tekrar", type="password", placeholder="••••••••")
+                if st.form_submit_button("Kayıt Ol", use_container_width=True):
+                    if p1 != p2:
+                        st.error("❌ Şifreler eşleşmiyor!")
+                    elif len(p1) < 6:
+                        st.error("❌ Şifre en az 6 karakter!")
+                    else:
+                        user = st.session_state.auth.register(u, e, p1)
+                        if user:
+                            st.success("✅ Kayıt başarılı! Giriş yapabilirsin.")
+                        else:
+                            st.error("❌ Kullanıcı adı zaten var!")
+
+# ============================================
+# CHAT SAYFASI
+# ============================================
+def render_chat():
+    # Başlık
+    st.markdown("""
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+        <h1 class="enterprise-title" style="margin:0;">💬 Sohbet</h1>
+        <div>
+            <span class="enterprise-badge live-badge">⚡ Canlı</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Agent seçimi
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        agent_names = [f"{a['icon']} {a['name']}" for a in st.session_state.ai.agents.values()]
+        selected_agent = st.selectbox("🤖 Agent Seç", agent_names, index=0)
+        agent_key = selected_agent.split(" ")[1] if " " in selected_agent else "technical"
+    with col2:
+        st.write("")
+        st.write("")
+        clear = st.button("🗑️ Temizle", use_container_width=True)
+        if clear:
+            st.session_state.db.clear_messages()
+            st.session_state.messages = []
+            st.rerun()
+    
+    # Mesajları göster
+    msgs = st.session_state.db.get_messages()
+    
+    if not msgs:
+        # Hoş geldin mesajı
+        st.markdown("""
+        <div style="text-align:center;padding:40px 20px;">
+            <div style="font-size:3rem;">👋</div>
+            <h3 style="color:#94a3b8;">Merhaba! Sohbet etmeye başlayalım.</h3>
+            <p style="color:#64748b;">Aşağıdan bir mesaj yaz veya hızlı komutları kullan.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        for msg in msgs:
+            if msg["role"] == "user":
+                st.markdown(f"""
+                <div class="chat-user">
+                    <strong>👤 Siz</strong>
+                    <div>{msg["content"]}</div>
+                    <div class="chat-time">{msg["timestamp"][:16]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                agent_name = msg.get("agent", "Ryzen")
+                st.markdown(f"""
+                <div class="chat-assistant">
+                    <div class="agent-name">🤖 {agent_name}</div>
+                    <div>{msg["content"]}</div>
+                    <div class="chat-time">{msg["timestamp"][:16]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+    
+    # Input
+    st.divider()
+    if prompt := st.chat_input("Mesajınızı yazın..."):
+        with st.spinner("Düşünüyor..."):
+            response = st.session_state.ai.ask(prompt, agent_key)
+        st.rerun()
+    
+    # Hızlı komutlar
+    st.caption("⚡ Hızlı Komutlar")
+    cols = st.columns(4)
+    quick = [
+        ("🌤️ Hava", "Bugün hava nasıl?"),
+        ("💡 Fikir", "Bana yaratıcı bir fikir ver"),
+        ("📊 Rapor", "Bir satış raporu hazırla"),
+        ("💻 Kod", "Python'da web scraper yaz")
+    ]
+    for col, (label, action) in zip(cols, quick):
+        with col:
+            if st.button(label, use_container_width=True):
+                st.session_state.ai.ask(action, agent_key)
+                st.rerun()
+
+# ============================================
+# AGENT SAYFASI
+# ============================================
+def render_agents():
+    st.markdown("<h1 class='enterprise-title'>🤖 Agent'lar</h1>", unsafe_allow_html=True)
+    
+    cols = st.columns(2)
+    for idx, (key, agent) in enumerate(st.session_state.ai.agents.items()):
+        with cols[idx % 2]:
+            st.markdown(f"""
+            <div class="card card-gradient">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="font-size:2.5rem;">{agent['icon']}</div>
+                    <div>
+                        <h3 style="margin:0;">{agent['name']}</h3>
+                        <p style="color:#94a3b8;font-size:0.85rem;margin:0;">{agent['role']}</p>
+                    </div>
+                    <div style="margin-left:auto;">
+                        <span class="enterprise-badge" style="background:#059669;">Aktif</span>
+                    </div>
+                </div>
+                <p style="color:#cbd5e1;margin-top:8px;font-size:0.9rem;">
+                    Uzmanlık alanı: {agent['role']}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+# ============================================
+# ANALİTİK SAYFASI
+# ============================
