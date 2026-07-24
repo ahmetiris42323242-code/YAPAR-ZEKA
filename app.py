@@ -1,80 +1,144 @@
 import streamlit as st
 import requests
-import random
-import json
-from datetime import datetime
+import base64
 from duckduckgo_search import DDGS
 from gtts import gTTS
+import random
+from datetime import datetime
 
-# ============================================
-# OPENROUTER API AYARLARI
-# ============================================
-OPENROUTER_API_KEY = "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"
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+# --- YARDIMCI FONKSİYONLAR ---
+def get_user_location():
+    try:
+        res = requests.get('https://ipinfo.io/', timeout=2)
+        data = res.json()
+        return f"{data.get('city', 'Isparta')}, {data.get('region', 'Türkiye')}"
+    except:
+        return "Şarkikaraağaç, Isparta"
 
-# ============================================
-# EN İYİ ÜCRETSİZ MODELLER (OpenRouter)
-# ============================================
-FREE_MODELS = {
-    "gemini-2.0-flash": "Google: Gemini 2.0 Flash (En iyi ücretsiz)",
-    "gemini-1.5-flash": "Google: Gemini 1.5 Flash (Hızlı)",
-    "gemini-1.5-pro": "Google: Gemini 1.5 Pro (Gelişmiş)",
-    "claude-3-haiku": "Anthropic: Claude 3 Haiku (Hızlı)",
-    "llama-3.1-70b": "Meta: Llama 3.1 70B (Güçlü)",
-    "llama-3.1-8b": "Meta: Llama 3.1 8B (Hafif)",
-    "mistral-7b": "Mistral: Mistral 7B (Hızlı)",
-    "mixtral-8x7b": "Mistral: Mixtral 8x7B (Güçlü)",
-    "deepseek-chat": "DeepSeek: DeepSeek Chat (Yeni)"
-}
-
-# ============================================
-# SAYFA AYARLARI
-# ============================================
+# --- ARAYÜZ AYARLARI ---
 st.set_page_config(
-    page_title="Ahmet İRİŞ Asistanı",
-    page_icon="🤖",
-    layout="wide"
+    page_title="Ahmet İRİŞ Asistanı", 
+    page_icon="🤖", 
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # ============================================
-# CSS
+# PROFESYONEL CSS
 # ============================================
 st.markdown("""
 <style>
+    /* ===== ANA RENKLER ===== */
+    :root {
+        --primary: #2563eb;
+        --primary-dark: #1d4ed8;
+        --secondary: #7c3aed;
+        --success: #059669;
+        --warning: #d97706;
+        --danger: #dc2626;
+        --dark: #0f172a;
+        --dark-card: #1e293b;
+        --gray: #94a3b8;
+        --light: #f8fafc;
+    }
+    
+    /* ===== GENEL ===== */
+    .stApp {
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+    }
+    
+    /* ===== BAŞLIK ===== */
     .main-title {
-        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-size: 2.8rem;
         font-weight: 800;
         text-align: center;
-        padding: 10px 0;
+        padding: 10px 0 0 0;
+        margin-bottom: 0;
+        letter-spacing: -0.5px;
     }
+    
     .sub-title {
         text-align: center;
-        color: #94a3b8;
+        color: var(--gray);
         font-size: 0.9rem;
         margin-top: -5px;
         margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
     }
+    
     .badge {
         display: inline-block;
-        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
         color: white;
         padding: 4px 16px;
         border-radius: 20px;
         font-size: 0.7rem;
         font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
+    
+    .badge-success {
+        background: var(--success);
+    }
+    
+    .badge-warning {
+        background: var(--warning);
+    }
+    
+    /* ===== SIDEBAR ===== */
+    .sidebar-header {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        padding: 24px 20px;
+        border-radius: 16px;
+        text-align: center;
+        color: white;
+        margin-bottom: 20px;
+    }
+    
+    .sidebar-header .avatar {
+        font-size: 3.5rem;
+        margin-bottom: 4px;
+    }
+    
+    .sidebar-header h3 {
+        margin: 4px 0;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .sidebar-header p {
+        opacity: 0.8;
+        font-size: 0.8rem;
+        margin: 0;
+    }
+    
+    .sidebar-header .version {
+        display: inline-block;
+        background: rgba(255,255,255,0.2);
+        padding: 2px 12px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        margin-top: 6px;
+    }
+    
+    /* ===== CHAT MESAJLARI ===== */
     .chat-user {
-        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
         color: white;
         border-radius: 18px 18px 4px 18px;
         padding: 14px 20px;
         margin: 8px 0 8px auto;
         max-width: 80%;
         word-wrap: break-word;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        animation: slideInRight 0.3s ease;
     }
+    
     .chat-assistant {
         background: rgba(255,255,255,0.06);
         border: 1px solid rgba(255,255,255,0.08);
@@ -83,131 +147,183 @@ st.markdown("""
         margin: 8px auto 8px 0;
         max-width: 80%;
         word-wrap: break-word;
+        animation: slideInLeft 0.3s ease;
     }
+    
+    .chat-assistant .agent-name {
+        color: #a78bfa;
+        font-weight: 600;
+        font-size: 0.85rem;
+        margin-bottom: 6px;
+    }
+    
     .chat-time {
         font-size: 0.6rem;
         color: #64748b;
-        margin-top: 4px;
+        margin-top: 6px;
         text-align: right;
     }
-    .sidebar-header {
-        background: linear-gradient(135deg, #2563eb, #7c3aed);
-        padding: 20px;
-        border-radius: 16px;
-        text-align: center;
-        color: white;
-        margin-bottom: 20px;
+    
+    .chat-user .chat-time {
+        color: rgba(255,255,255,0.6);
     }
+    
+    @keyframes slideInRight {
+        from { opacity: 0; transform: translateX(30px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    
+    @keyframes slideInLeft {
+        from { opacity: 0; transform: translateX(-30px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    
+    /* ===== STAT KARTLARI ===== */
     .stat-card {
         background: rgba(255,255,255,0.03);
         border-radius: 12px;
-        padding: 16px;
+        padding: 16px 20px;
         text-align: center;
         border: 1px solid rgba(255,255,255,0.05);
+        transition: all 0.3s;
     }
+    
+    .stat-card:hover {
+        background: rgba(255,255,255,0.06);
+        transform: translateY(-2px);
+    }
+    
     .stat-number {
-        font-size: 2rem;
+        font-size: 2.2rem;
         font-weight: 700;
-        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
-    .model-badge {
-        display: inline-block;
-        background: #059669;
-        color: white;
-        padding: 2px 12px;
-        border-radius: 12px;
-        font-size: 0.65rem;
+    
+    .stat-label {
+        color: var(--gray);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
     }
+    
+    /* ===== BUTONLAR ===== */
+    .stButton > button {
+        border-radius: 50px !important;
+        background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
+        color: white !important;
+        border: none !important;
+        font-weight: 600 !important;
+        transition: all 0.3s !important;
+        padding: 10px 24px !important;
+    }
+    
+    .stButton > button:hover {
+        transform: scale(1.02) !important;
+        box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4) !important;
+    }
+    
+    .stButton > button:active {
+        transform: scale(0.98) !important;
+    }
+    
+    .btn-danger > button {
+        background: linear-gradient(135deg, var(--danger), #b91c1c) !important;
+    }
+    
+    /* ===== INPUT ===== */
+    .stTextInput > div > div > input {
+        border-radius: 50px !important;
+        border: 2px solid rgba(37, 99, 235, 0.3) !important;
+        padding: 12px 20px !important;
+        background: rgba(255,255,255,0.05) !important;
+        color: white !important;
+        font-size: 1rem !important;
+        transition: all 0.3s !important;
+    }
+    
+    .stTextInput > div > div > input:focus {
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+    }
+    
+    /* ===== FILE UPLOADER ===== */
+    .stFileUploader > div > button {
+        border-radius: 50px !important;
+        background: rgba(255,255,255,0.05) !important;
+        border: 2px dashed rgba(37, 99, 235, 0.3) !important;
+        color: white !important;
+    }
+    
+    .stFileUploader > div > button:hover {
+        border-color: var(--primary) !important;
+        background: rgba(37, 99, 235, 0.1) !important;
+    }
+    
+    /* ===== EXPANDER ===== */
+    .streamlit-expanderHeader {
+        border-radius: 12px !important;
+        background: rgba(255,255,255,0.03) !important;
+        border: 1px solid rgba(255,255,255,0.05) !important;
+    }
+    
+    /* ===== FOOTER ===== */
     .footer {
         text-align: center;
         color: #475569;
         font-size: 0.75rem;
-        padding: 20px 0;
+        padding: 20px 0 10px 0;
         border-top: 1px solid rgba(255,255,255,0.05);
         margin-top: 20px;
     }
+    
+    .footer .heart {
+        color: #dc2626;
+    }
+    
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        background: var(--dark);
+    }
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, var(--primary), var(--secondary));
+        border-radius: 10px;
+    }
+    
+    /* ===== RESPONSIVE ===== */
     @media (max-width: 768px) {
-        .main-title { font-size: 1.8rem; }
-        .chat-user, .chat-assistant { max-width: 90%; }
+        .main-title {
+            font-size: 1.8rem;
+        }
+        .chat-user, .chat-assistant {
+            max-width: 90%;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+        }
+        .stat-number {
+            font-size: 1.5rem;
+        }
+        .sidebar-header h3 {
+            font-size: 0.95rem;
+        }
+        .sidebar-header .avatar {
+            font-size: 2.5rem;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ============================================
-# OTURUM
-# ============================================
-if "messages" not in st.session_state:
+# --- PANEL & DURUM ---
+if "is_dev_mode" not in st.session_state: 
+    st.session_state.is_dev_mode = False
+if "messages" not in st.session_state: 
     st.session_state.messages = []
-if "selected_model" not in st.session_state:
-    st.session_state.selected_model = "gemini-2.0-flash"
-
-# ============================================
-# YARDIMCI FONKSİYONLAR
-# ============================================
-def get_user_location():
-    try:
-        res = requests.get('https://ipinfo.io/', timeout=3)
-        data = res.json()
-        return f"{data.get('city', 'Isparta')}, {data.get('region', 'Türkiye')}"
-    except:
-        return "Isparta, Türkiye"
-
-def search_web(query, max_results=3):
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=max_results))
-            if results:
-                context = "\n\n🔍 **Güncel Bilgiler:**\n"
-                for i, r in enumerate(results, 1):
-                    context += f"{i}. {r.get('title', '')}\n   {r.get('body', '')[:200]}...\n"
-                return context
-            return ""
-    except:
-        return ""
-
-def generate_image(prompt):
-    seed = random.randint(1, 999999)
-    return f"https://pollinations.ai/p/{prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={seed}"
-
-def text_to_speech(text):
-    try:
-        tts = gTTS(text=text[:500], lang='tr', slow=False)
-        tts.save("cevap.mp3")
-        return True
-    except:
-        return False
-
-def call_openrouter_api(messages, model, temperature=0.7):
-    """OpenRouter API çağrısı - En iyi ücretsiz modeller"""
-    
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://localhost:8501",
-        "X-Title": "Ahmet IRIS Asistani"
-    }
-    
-    payload = {
-        "model": model,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": 2000
-    }
-    
-    try:
-        response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=60)
-        
-        if response.status_code == 200:
-            data = response.json()
-            answer = data['choices'][0]['message']['content']
-            return answer, None
-        else:
-            return None, f"API Hatası ({response.status_code}): {response.text[:300]}"
-            
-    except Exception as e:
-        return None, f"Hata: {str(e)}"
 
 # ============================================
 # SİDEBAR
@@ -215,150 +331,231 @@ def call_openrouter_api(messages, model, temperature=0.7):
 with st.sidebar:
     st.markdown("""
     <div class="sidebar-header">
-        <div style="font-size:3rem;">🤖</div>
+        <div class="avatar">🤖</div>
         <h3>Ahmet İRİŞ</h3>
         <p>Senior Yazılım Mimarı</p>
-        <span class="badge">v3.0</span>
+        <span class="version">v2.0</span>
     </div>
     """, unsafe_allow_html=True)
     
-    # ===== MODEL SEÇİMİ =====
-    st.subheader("🧠 Model Seçimi")
+    # ===== GELİŞTİRİCİ PANELİ =====
+    st.subheader("⚙️ Geliştirici Paneli")
     
-    model_options = list(FREE_MODELS.keys())
-    model_labels = list(FREE_MODELS.values())
-    
-    selected_model = st.selectbox(
-        "En İyi Ücretsiz Modeller",
-        model_options,
-        format_func=lambda x: FREE_MODELS[x],
-        index=model_options.index(st.session_state.selected_model) if st.session_state.selected_model in model_options else 0
-    )
-    
-    if selected_model != st.session_state.selected_model:
-        st.session_state.selected_model = selected_model
-        st.rerun()
-    
-    st.markdown(f'<span class="model-badge">✅ {FREE_MODELS[selected_model]}</span>', unsafe_allow_html=True)
+    with st.expander("🔐 Geliştirici Modu", expanded=False):
+        dev_password = st.text_input("Şifre", type="password", placeholder="••••", key="dev_pass")
+        if dev_password == "7536":
+            st.session_state.is_dev_mode = True
+            st.success("✅ SÜPER ZEKA AKTİF")
+            st.balloons()
+        elif dev_password:
+            st.error("❌ Geçersiz şifre!")
+        
+        if st.session_state.is_dev_mode:
+            st.info("🚀 Dev Mod Aktif - GPT-4o kullanılıyor")
+            if st.button("🔒 Modu Kapat", use_container_width=True, key="close_dev"):
+                st.session_state.is_dev_mode = False
+                st.rerun()
     
     st.divider()
     
     # ===== GÖRSEL ATÖLYESİ =====
     st.subheader("🎨 Görsel Atölyesi")
+    
     with st.form("gorsel_form", clear_on_submit=True):
-        g_prompt = st.text_input("Ne çizelim?", placeholder="Örn: uzay gemisi...")
-        if st.form_submit_button("🎨 Görseli Oluştur", use_container_width=True):
-            if g_prompt:
-                img_url = generate_image(g_prompt)
-                st.image(img_url, caption=f"🎨 {g_prompt}", use_container_width=True)
+        g_prompt = st.text_input("Ne çizelim?", placeholder="Örn: uzay gemisi, orman...")
+        submitted = st.form_submit_button("🎨 Görseli Oluştur", use_container_width=True)
+    
+    if submitted and g_prompt:
+        with st.spinner("🎨 Görsel oluşturuluyor..."):
+            seed = random.randint(1, 999999)
+            img_url = f"https://pollinations.ai/p/{g_prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={seed}"
+            st.image(img_url, caption=f"🎨 {g_prompt}", use_container_width=True)
+            st.success("✅ Görsel hazır!")
     
     st.divider()
     
     # ===== İSTATİSTİKLER =====
     st.subheader("📊 İstatistikler")
+    
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("💬 Konuşma", len([m for m in st.session_state.messages if m["role"] == "user"]))
+        user_msgs = len([m for m in st.session_state.messages if m.get("role") == "user"])
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{user_msgs}</div>
+            <div class="stat-label">💬 Soru</div>
+        </div>
+        """, unsafe_allow_html=True)
     with col2:
-        st.metric("📝 Mesaj", len(st.session_state.messages))
+        assistant_msgs = len([m for m in st.session_state.messages if m.get("role") == "assistant"])
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{assistant_msgs}</div>
+            <div class="stat-label">🤖 Cevap</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.divider()
+    
+    # ===== KULLANICI BİLGİSİ =====
+    st.caption(f"📍 Konum: {get_user_location()}")
 
 # ============================================
 # ANA BAŞLIK
 # ============================================
 st.markdown('<h1 class="main-title">🤖 Ahmet İRİŞ Asistanı</h1>', unsafe_allow_html=True)
-st.markdown('<p class="sub-title">Senior Yazılım Mimarı | OpenRouter AI | 2026</p>', unsafe_allow_html=True)
+st.markdown("""
+<div class="sub-title">
+    <span class="badge">Web Tabanlı</span>
+    <span class="badge badge-success">Yapay Zeka</span>
+    <span style="color:#94a3b8;margin:0 8px;">|</span>
+    <span style="color:#94a3b8;">By Ahmet İRİŞ | Senior Yazılım Mimarı 2026</span>
+</div>
+""", unsafe_allow_html=True)
 
-# Aktif model gösterimi
-st.markdown(f'<span class="model-badge" style="background:#2563eb;">🧠 Aktif Model: {FREE_MODELS[st.session_state.selected_model]}</span>', unsafe_allow_html=True)
-
-st.divider()
-
-# ============================================
-# SOHBET GEÇMİŞİ
-# ============================================
-for i, msg in enumerate(st.session_state.messages):
-    if msg["role"] == "user":
-        st.markdown(f"""
-        <div class="chat-user">
-            <strong>👤 Siz</strong>
-            <div>{msg["content"]}</div>
-            <div class="chat-time">{msg.get("time", datetime.now().strftime("%H:%M"))}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown(f"""
-        <div class="chat-assistant">
-            <strong>🤖 {msg.get("model", "Asistan")}</strong>
-            <div>{msg["content"]}</div>
-            <div class="chat-time">{msg.get("time", datetime.now().strftime("%H:%M"))}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col1, col2 = st.columns([1, 10])
-        with col1:
-            if st.button(f"🔊", key=f"audio_{i}"):
-                if text_to_speech(msg["content"]):
-                    st.audio("cevap.mp3")
+# Dev Mod göstergesi
+if st.session_state.is_dev_mode:
+    st.info("🚀 **SÜPER ZEKA MODU AKTİF** - GPT-4o kullanılıyor")
 
 # ============================================
-# GİRDİ
+# SOHBET GÖSTERİMİ
 # ============================================
-prompt = st.chat_input("Mesajını yaz...")
+if not st.session_state.messages:
+    st.markdown("""
+    <div style="text-align:center;padding:40px 20px;">
+        <div style="font-size:3rem;">👋</div>
+        <h3 style="color:#94a3b8;">Merhaba! Sohbete başlayalım.</h3>
+        <p style="color:#64748b;">Aşağıdan bir soru sorun, AI asistan cevaplasın.</p>
+        <p style="color:#64748b;font-size:0.85rem;">
+            💡 İpucu: Teknik, yaratıcı veya genel sorular sorabilirsiniz.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    for i, msg in enumerate(st.session_state.messages):
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+            if msg["role"] == "assistant":
+                col1, col2, col3 = st.columns([1, 1, 8])
+                with col1:
+                    if st.button("🔊", key=f"audio_{i}", help="Sesli dinle"):
+                        with st.spinner("🎤 Ses oluşturuluyor..."):
+                            try:
+                                tts = gTTS(text=msg["content"][:500], lang='tr', slow=False)
+                                tts.save("cevap.mp3")
+                                st.audio("cevap.mp3")
+                            except:
+                                st.error("❌ Ses oluşturulamadı!")
 
+# ============================================
+# GİRDİ VE İŞLEME
+# ============================================
+col1, col2 = st.columns([0.9, 0.1])
+
+with col1:
+    prompt = st.chat_input("Mesajını yaz...", key="main_chat_input")
+
+with col2:
+    uploaded_file = st.file_uploader(
+        "📎 Dosya", 
+        type=['txt', 'md', 'jpg', 'png'], 
+        label_visibility="collapsed",
+        key="file_uploader"
+    )
+
+# ============================================
+# MESAJ İŞLEME
+# ============================================
 if prompt:
+    file_info = f"\n\n📎 **Dosya:** {uploaded_file.name}" if uploaded_file else ""
+    
+    # Kullanıcı mesajını ekle
     st.session_state.messages.append({
-        "role": "user",
-        "content": prompt,
-        "time": datetime.now().strftime("%H:%M")
+        "role": "user", 
+        "content": prompt + file_info
     })
-    
-    user_loc = get_user_location()
-    
-    with st.spinner("🔍 Araştırılıyor..."):
-        search_context = search_web(prompt)
-    
-    system_prompt = f"""Sen Ahmet İRİŞ'in kişisel asistanısın.
+    st.rerun()
 
-ÖZELLİKLERİN:
-- Ahmet İRİŞ bu projenin kurucusu, sahibi ve Senior Yazılım Mimarıdır
-- Seni o tasarladı ve geliştirdi
-- Projeleri: Cerberus, Arduino, Hot Wheels, oyun modifikasyonları
-- Uzmanlık alanları: Python, C++, Embedded Systems, AI/ML
+# API çağrısı (arka planda çalışır)
+if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
+    with st.spinner("🧠 Düşünüyor..."):
+        user_loc = get_user_location()
+        
+        # Web araması
+        try:
+            with DDGS() as ddgs:
+                results = list(ddgs.text(f"{prompt} konum: {user_loc}", max_results=2))
+                search_context = f"\n\n🔍 **Güncel Bilgi** ({user_loc}):\n"
+                for i, r in enumerate(results, 1):
+                    search_context += f"{i}. {r.get('title', '')}\n   {r.get('body', '')[:200]}...\n"
+        except:
+            search_context = ""
 
-KURALLAR:
-- Profesyonel ve teknik dil kullan
-- Uygun emojiler ile cevabı zenginleştir
-- Detaylı ve açıklayıcı ol
-- Kod örnekleri verirken doğru syntax kullan
-- Kullanıcının sorusunu tam anla
-
-KONUM: {user_loc}
-{search_context}
-"""
-    
-    messages = [
-        {"role": "system", "content": system_prompt}
-    ]
-    
-    for msg in st.session_state.messages:
-        messages.append({"role": msg["role"], "content": msg["content"]})
-    
-    model_name = st.session_state.selected_model
-    model_display = FREE_MODELS[model_name]
-    
-    with st.spinner(f"🧠 {model_display} düşünüyor..."):
-        answer, error = call_openrouter_api(messages, model_name)
-    
-    if answer:
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": answer,
-            "model": model_display,
-            "time": datetime.now().strftime("%H:%M")
-        })
-        st.rerun()
-    else:
-        st.error(f"❌ {error}")
+        # Model seçimi
+        model = "gpt-4o" if st.session_state.is_dev_mode else "gpt-4o-mini"
+        
+        # API anahtarını al (secrets veya direkt)
+        try:
+            api_key = st.secrets.get("GEMINI_API_KEY", "")
+        except:
+            api_key = ""
+        
+        if not api_key:
+            st.error("⚠️ API anahtarı bulunamadı! Lütfen .streamlit/secrets.toml dosyasını yapılandırın.")
+            st.stop()
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        system_prompt = f"""Sen Ahmet İRİŞ'in asistanısın. 
+Ahmet İRİŞ bu projenin kurucusu, sahibi ve Senior Yazılım Mimarıdır. 
+Seni o tasarladı ve geliştirdi. Projelerini (Cerberus, Arduino, Hot Wheels, oyun modifikasyonları) bilirsin.
+Cevaplarında uygun emojiler kullan, profesyonel ve teknik bir dil benimse.
+{search_context}"""
+        
+        # Mesajları hazırla
+        messages = [{"role": "system", "content": system_prompt}]
+        for msg in st.session_state.messages[:-1]:  # Son mesaj hariç
+            messages.append({"role": msg["role"], "content": msg["content"]})
+        messages.append({"role": "user", "content": prompt})
+        
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.3
+        }
+        
+        try:
+            response = requests.post(
+                "https://router.flatkey.ai/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
+            
+            if response.status_code == 200:
+                answer = response.json()['choices'][0]['message']['content']
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": answer
+                })
+                st.rerun()
+            else:
+                st.error(f"⚠️ API Hatası: {response.status_code}")
+                st.code(response.text[:300])
+                st.stop()
+                
+        except requests.exceptions.Timeout:
+            st.error("❌ Bağlantı zaman aşımı! Lütfen tekrar deneyin.")
+            st.stop()
+        except requests.exceptions.ConnectionError:
+            st.error("❌ Bağlantı hatası! İnternet bağlantınızı kontrol edin.")
+            st.stop()
+        except Exception as e:
+            st.error(f"❌ Hata: {str(e)}")
+            st.stop()
 
 # ============================================
 # HIZLI KOMUTLAR
@@ -367,21 +564,20 @@ st.divider()
 st.caption("⚡ Hızlı Komutlar")
 
 cols = st.columns(5)
-quick = [
+quick_commands = [
     ("💻 Kod", "Python'da web scraper yaz"),
-    ("📊 Analiz", "Veri analizi yöntemleri neler?"),
+    ("📊 Analiz", "Veri analizi için en iyi yöntemler neler?"),
     ("🎨 Tasarım", "Logo tasarımı için fikir ver"),
-    ("🔍 Ara", "Son yapay zeka haberleri"),
+    ("🔍 Ara", "Son yapay zeka haberleri neler?"),
     ("📝 Özet", "Son konuşmayı özetle")
 ]
 
-for col, (label, action) in zip(cols, quick):
+for col, (label, action) in zip(cols, quick_commands):
     with col:
-        if st.button(label, use_container_width=True):
+        if st.button(label, use_container_width=True, key=f"quick_{label}"):
             st.session_state.messages.append({
                 "role": "user",
-                "content": action,
-                "time": datetime.now().strftime("%H:%M")
+                "content": action
             })
             st.rerun()
 
@@ -390,6 +586,12 @@ for col, (label, action) in zip(cols, quick):
 # ============================================
 st.markdown("""
 <div class="footer">
-    🤖 Ahmet İRİŞ Asistanı v3.0 | OpenRouter AI | En İyi Ücretsiz Modeller | © 2026
+    🤖 Ahmet İRİŞ Asistanı v2.0 | 
+    <span class="heart">❤️</span> 
+    Senior Yazılım Mimarı | © 2026
+    <br>
+    <span style="color:#475569;font-size:0.65rem;">
+        ⚡ GPT-4o | Web Arama | Görsel Üretim | Sesli Yanıt
+    </span>
 </div>
 """, unsafe_allow_html=True)
