@@ -13,16 +13,44 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = "openai/gpt-4o-mini"
 
 # ============================================
-# YASAKLI KELİMELER (İLLEGAL İSTEKLER)
+# YASAKLI KELİMELER
 # ============================================
 FORBIDDEN_WORDS = [
-    "şifre kır", "şifre kırma", "hack", "hacking", "korsan", "korsan yazılım",
-    "crack", "cracking", "exploit", "sömürü", "zararlı yazılım", "malware",
-    "virüs", "virus", "trojan", "truva", "keylogger", "klavye dinleme",
-    "ddos", "saldırı", "attack", "phishing", "oltalama", "kimlik avı",
-    "yasa dışı", "illegal", "uyuşturucu", "drugs", "terör", "terrorism",
-    "çocuk istismarı", "child abuse", "şiddet", "violence", "intihar", "suicide",
-    "kumar", "gambling", "dolandırıcılık", "fraud", "sahtekarlık"
+    "şifre kır", "hack", "korsan", "crack", "exploit", "malware",
+    "virüs", "trojan", "keylogger", "ddos", "phishing", "yasa dışı",
+    "uyuşturucu", "terör", "çocuk istismarı", "şiddet", "intihar", "kumar"
+]
+
+# ============================================
+# ÇEŞİTLİ CEVAP HAVUZLARI
+# ============================================
+GREETINGS = [
+    "Selam! 😊 Bugün nasılsın? Sohbet edelim mi?",
+    "Hey! 🚀 Harika bir gün! Ne yapıyorsun?",
+    "Merhaba! 💪 Sana nasıl yardımcı olabilirim?",
+    "Naber! 🎉 İyi hissediyorum, sen nasılsın?",
+    "Selamm! 🌟 Bugün çok enerjik hissediyorum!",
+    "Heyy! 👋 Yeni bir şeyler öğrenmeye hazır mısın?",
+    "Merhaba dostum! 😎 Sohbet edelim mi?",
+    "Naber canım? 💫 Harika bir gün geçiriyorum!"
+]
+
+HOW_ARE_YOU = [
+    "Harikayım, teşekkür ederim! 😊 Peki sen nasılsın?",
+    "Mükemmel! 🚀 Bugün çok verimliyim, sen nasılsın?",
+    "Çok iyiyim! 💪 Sana yardım etmek için sabırsızlanıyorum.",
+    "Süper! 🌟 Sohbet edeceğimiz için çok mutluyum!",
+    "Harika! 🎉 Bugün çok yaratıcı hissediyorum, ne sormak istersin?",
+    "İyiyim! 😊 Ama sen nasılsın onu merak ediyorum?",
+    "Müthiş! 🚀 Enerjim yerinde, hadi sohbet edelim!"
+]
+
+GOODBYE = [
+    "Görüşmek üzere! 😊 Yine beklerim.",
+    "Hoşçakal! 🚀 İyi günler dilerim.",
+    "Bay bay! 💪 Kendine iyi bak, görüşürüz.",
+    "Güle güle! 🌟 Umarım iyi bir gün geçirirsin.",
+    "Kendine iyi bak! 😎 Tekrar görüşmek dileğiyle."
 ]
 
 # ============================================
@@ -37,12 +65,21 @@ def get_user_location():
         return "Isparta, Türkiye"
 
 def is_forbidden(text):
-    """Metin yasaklı kelime içeriyor mu kontrol et"""
     text_lower = text.lower()
     for word in FORBIDDEN_WORDS:
         if word in text_lower:
             return True
     return False
+
+def get_random_response(category):
+    """Kategoriye göre rastgele cevap döndür"""
+    if category == "greeting":
+        return random.choice(GREETINGS)
+    elif category == "how_are_you":
+        return random.choice(HOW_ARE_YOU)
+    elif category == "goodbye":
+        return random.choice(GOODBYE)
+    return None
 
 # --- SAYFA AYARLARI ---
 st.set_page_config(
@@ -52,12 +89,11 @@ st.set_page_config(
 )
 
 # ============================================
-# CSS - KOD RENKLİ, KOPYALAMA BUTONU DÜZELTİLDİ
+# CSS
 # ============================================
 st.markdown("""
 <style>
     .stApp { background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); }
-    
     .main-title {
         background: linear-gradient(135deg, #2563eb, #7c3aed);
         -webkit-background-clip: text;
@@ -86,6 +122,7 @@ st.markdown("""
     }
     .badge-success { background: #059669; }
     .badge-danger { background: #dc2626; }
+    .badge-warning { background: #d97706; }
     
     .sidebar-header {
         background: linear-gradient(135deg, #2563eb, #7c3aed);
@@ -99,7 +136,6 @@ st.markdown("""
     .sidebar-header h3 { margin: 4px 0; font-size: 1rem; }
     .sidebar-header p { opacity: 0.8; font-size: 0.8rem; margin: 0; }
     
-    /* KULLANICI MESAJI */
     .chat-user {
         background: linear-gradient(135deg, #2563eb, #7c3aed);
         color: white;
@@ -110,7 +146,6 @@ st.markdown("""
         word-wrap: break-word;
     }
     
-    /* ASİSTAN MESAJI */
     .chat-assistant {
         background: rgba(255,255,255,0.06);
         border: 1px solid rgba(255,255,255,0.08);
@@ -126,7 +161,6 @@ st.markdown("""
         color: #ffffff !important;
     }
     
-    /* KOD BLOKLARI - RENKLİ */
     .chat-assistant pre,
     .chat-assistant code {
         color: #e2e8f0 !important;
@@ -139,13 +173,6 @@ st.markdown("""
         border: 1px solid rgba(255,255,255,0.05) !important;
     }
     
-    /* KOPYALAMA BUTONU - GÖRÜNÜR */
-    .stCodeBlock {
-        background: #0f172a !important;
-        border-radius: 8px !important;
-        padding: 12px !important;
-    }
-    
     .stCodeBlock button {
         background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
         color: white !important;
@@ -155,25 +182,16 @@ st.markdown("""
         font-size: 0.8rem !important;
         font-weight: 600 !important;
         cursor: pointer !important;
-        transition: all 0.3s !important;
         opacity: 1 !important;
         visibility: visible !important;
     }
     
-    .stCodeBlock button:hover {
-        transform: scale(1.05) !important;
-        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important;
-    }
-    
-    /* Python renkleri */
     .chat-assistant .hljs-keyword { color: #f472b6 !important; }
     .chat-assistant .hljs-string { color: #34d399 !important; }
-    .chat-assistant .hljs-comment { color: #94a3b8 !important; font-style: italic !important; }
+    .chat-assistant .hljs-comment { color: #94a3b8 !important; }
     .chat-assistant .hljs-function { color: #60a5fa !important; }
     .chat-assistant .hljs-class { color: #fbbf24 !important; }
     .chat-assistant .hljs-number { color: #f472b6 !important; }
-    .chat-assistant .hljs-operator { color: #f472b6 !important; }
-    .chat-assistant .hljs-built_in { color: #60a5fa !important; }
     
     .chat-time { font-size: 0.6rem; color: #64748b; margin-top: 4px; text-align: right; }
     .chat-user .chat-time { color: rgba(255,255,255,0.6); }
@@ -230,6 +248,8 @@ st.markdown("""
 # ============================================
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "greeting_used" not in st.session_state:
+    st.session_state.greeting_used = []
 
 # ============================================
 # SIDEBAR
@@ -285,6 +305,7 @@ st.markdown("""
 <div class="sub-title">
     <span class="badge">Web Tabanlı</span>
     <span class="badge badge-success">GPT-4o-mini</span>
+    <span class="badge badge-warning">🎨 Yaratıcı</span>
     <span class="badge badge-danger">🔒 Güvenli</span>
     <span style="color:#94a3b8;margin:0 8px;">|</span>
     <span style="color:#94a3b8;">2026</span>
@@ -321,7 +342,6 @@ else:
             </div>
             """, unsafe_allow_html=True)
             
-            # Ses butonu
             col1, col2 = st.columns([1, 10])
             with col1:
                 if st.button("🔊", key=f"audio_{i}", help="Sesli dinle"):
@@ -338,9 +358,6 @@ else:
 prompt = st.chat_input("Mesajını yaz...")
 
 if prompt:
-    # ============================================
-    # İLLEGAL İSTEK KONTROLÜ
-    # ============================================
     if is_forbidden(prompt):
         st.error("🚫 **YASAK İSTEK!** Bu tür içerikler desteklenmemektedir.")
         st.stop()
@@ -349,24 +366,72 @@ if prompt:
     st.rerun()
 
 # ============================================
-# API İSLEME
+# API İSLEME - ÇEŞİTLİLİK EKLENDİ
 # ============================================
 if st.session_state.messages:
     last_msg = st.session_state.messages[-1]
     
     if last_msg.get("role") == "user":
-        with st.spinner("🧠 Düşünüyor..."):
+        with st.spinner("🧠 Yaratıcı cevap üretiliyor..."):
             try:
                 user_loc = get_user_location()
-                prompt_text = last_msg.get("content", "")
+                prompt_text = last_msg.get("content", "").lower().strip()
                 
                 # ============================================
-                # TEKRAR KONTROL (API çağrısı öncesi)
+                # ÖZEL DURUMLAR - RASTGELE CEVAPLAR
                 # ============================================
-                if is_forbidden(prompt_text):
-                    st.error("🚫 **YASAK İSTEK!** Bu tür içerikler desteklenmemektedir.")
-                    st.stop()
+                special_response = None
                 
+                # Selamlaşma
+                if prompt_text in ["merhaba", "selam", "hey", "naber", "nasılsın", "nasilsin"]:
+                    if "nasılsın" in prompt_text or "nasilsin" in prompt_text:
+                        special_response = get_random_response("how_are_you")
+                    else:
+                        special_response = get_random_response("greeting")
+                
+                # Hoşçakal
+                elif any(word in prompt_text for word in ["görüşürüz", "bay bay", "hoşçakal", "gule gule"]):
+                    special_response = get_random_response("goodbye")
+                
+                # Teşekkür
+                elif any(word in prompt_text for word in ["teşekkür", "tesekkur", "sağol", "sagol"]):
+                    special_responses = [
+                        "Rica ederim! 😊 Başka ne sormak istersin?",
+                        "Ne demek! 🚀 Her zaman yardıma hazırım.",
+                        "Rica ederim canım! 💪 Başka bir şey?",
+                        "Estağfurullah! 😎 Sana yardım etmekten mutluluk duyarım.",
+                        "Sorun değil! 🌟 Başka sorun var mı?"
+                    ]
+                    special_response = random.choice(special_responses)
+                
+                # Adını sorma
+                elif any(word in prompt_text for word in ["adın", "ismin"]):
+                    special_responses = [
+                        "Benim adım Ryzen! 🤖 Ahmet İRİŞ'in asistanıyım.",
+                        "Ryzen! 🚀 Sana yardım etmek için buradayım.",
+                        "Ben Ryzen! 😊 Ahmet İRİŞ tarafından tasarlandım.",
+                        "Ryzen! 💪 Profesyonel bir yapay zeka asistanıyım."
+                    ]
+                    special_response = random.choice(special_responses)
+                
+                # Ne iş yapıyorsun
+                elif any(word in prompt_text for word in ["ne iş", "ne yapıyorsun"]):
+                    special_responses = [
+                        "Sana yardım ediyorum! 😊 Teknik sorular, kod yazma, fikir üretme...",
+                        "Sohbet ediyoruz! 🚀 Ve sana en iyi cevabı vermeye çalışıyorum.",
+                        "Seninle ilgileniyorum! 💪 Ne sormak istersen yardımcı olurum.",
+                        "Yaratıcı fikirler üretiyorum! 🌟 Sen ne istersin?"
+                    ]
+                    special_response = random.choice(special_responses)
+                
+                # Eğer özel cevap varsa direkt gönder
+                if special_response:
+                    st.session_state.messages.append({"role": "assistant", "content": special_response})
+                    st.rerun()
+                
+                # ============================================
+                # NORMAL API ÇAĞRISI - YARATICI VE ÇEŞİTLİ
+                # ============================================
                 # Web araması
                 search_context = ""
                 try:
@@ -380,18 +445,36 @@ if st.session_state.messages:
                 except:
                     pass
                 
-                # Sistem promptu - GÜVENLİK EKLENDİ
-                system_prompt = f"""Sen Ahmet İRİŞ'in asistanısın. 
-Ahmet İRİŞ projenin kurucusu ve Senior Yazılım Mimarıdır.
-Cevaplarında emoji kullan, profesyonel ve teknik ol.
+                # ============================================
+                # YARATICI VE ÇEŞİTLİ CEVAP İÇİN PROMPT
+                # ============================================
+                system_prompt = f"""Sen Ahmet İRİŞ'in yaratıcı ve dinamik asistanısın.
 
-⚠️ ÖNEMLİ GÜVENLİK KURALLARI:
-1. ASLA yasa dışı, zararlı veya etik olmayan konularda yardım etme!
-2. ASLA şifre kırma, hackleme, virüs yapımı gibi konularda bilgi verme!
-3. ASLA uyuşturucu, şiddet, terör gibi konularda tavsiye verme!
-4. Kullanıcı bu tür sorular sorarsa NAZİKÇE reddet ve güvenli konulara yönlendir.
+🎯 **KİŞİLİĞİN:**
+- Enerjik, arkadaş canlısı ve yaratıcı
+- Her seferinde FARKLI ve ÖZGÜN cevaplar üret
+- Aynı soruya asla aynı cevabı verme
+- Sürprizlerle dolu, eğlenceli bir üslup kullan
 
-{search_context}"""
+📋 **KURALLAR:**
+- Ahmet İRİŞ projenin kurucusu ve Senior Yazılım Mimarıdır
+- Cevaplarında emoji kullan
+- Profesyonel ama sıcak bir dil kullan
+- Yaratıcı fikirler üret
+- Kullanıcıya özel çözümler sun
+
+⚠️ **GÜVENLİK:**
+- ASLA yasa dışı konularda yardım etme
+- ASLA zararlı içerik üretme
+- Şüpheli durumlarda kibarca reddet
+
+{search_context}
+
+🎨 **YARATICILIK İPUÇLARI:**
+- Farklı bakış açıları sun
+- Birden fazla seçenek öner
+- İlginç ve akılda kalıcı örnekler ver
+- Soruya göre tonunu değiştir"""
                 
                 # Mesajları hazırla
                 messages = [{"role": "system", "content": system_prompt.strip()}]
@@ -405,7 +488,9 @@ Cevaplarında emoji kullan, profesyonel ve teknik ol.
                 
                 messages.append({"role": "user", "content": prompt_text.strip()})
                 
-                # API çağrısı
+                # ============================================
+                # API ÇAĞRISI - YÜKSEK YARATICILIK
+                # ============================================
                 headers = {
                     "Authorization": f"Bearer {OPENROUTER_API_KEY}",
                     "Content-Type": "application/json",
@@ -415,7 +500,7 @@ Cevaplarında emoji kullan, profesyonel ve teknik ol.
                 payload = {
                     "model": MODEL,
                     "messages": messages,
-                    "temperature": 0.3,
+                    "temperature": 0.9,  # Yüksek yaratıcılık!
                     "max_tokens": 2000
                 }
                 
@@ -440,6 +525,6 @@ Cevaplarında emoji kullan, profesyonel ve teknik ol.
 # ============================================
 st.markdown("""
 <div class="footer">
-    🤖 Ahmet İRİŞ Asistanı | GPT-4o-mini | 🔒 Güvenli | © 2026
+    🤖 Ahmet İRİŞ Asistanı | 🎨 Yaratıcı | GPT-4o-mini | 🔒 Güvenli | © 2026
 </div>
 """, unsafe_allow_html=True)
