@@ -29,7 +29,7 @@ st.set_page_config(
 )
 
 # ============================================
-# CSS
+# CSS - ASİSTAN CEVAPLARI BEYAZ
 # ============================================
 st.markdown("""
 <style>
@@ -72,6 +72,8 @@ st.markdown("""
     .sidebar-header .avatar { font-size: 3rem; }
     .sidebar-header h3 { margin: 4px 0; font-size: 1rem; }
     .sidebar-header p { opacity: 0.8; font-size: 0.8rem; margin: 0; }
+    
+    /* KULLANICI MESAJI - MAVİ */
     .chat-user {
         background: linear-gradient(135deg, #2563eb, #7c3aed);
         color: white;
@@ -81,17 +83,27 @@ st.markdown("""
         max-width: 80%;
         word-wrap: break-word;
     }
+    
+    /* ASİSTAN MESAJI - BEYAZ */
     .chat-assistant {
-        background: rgba(255,255,255,0.06);
-        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.1);
         border-radius: 18px 18px 18px 4px;
         padding: 12px 18px;
         margin: 8px auto 8px 0;
         max-width: 80%;
         word-wrap: break-word;
+        color: #ffffff !important;
     }
+    
+    .chat-assistant * {
+        color: #ffffff !important;
+    }
+    
     .chat-time { font-size: 0.6rem; color: #64748b; margin-top: 4px; text-align: right; }
     .chat-user .chat-time { color: rgba(255,255,255,0.6); }
+    .chat-assistant .chat-time { color: rgba(255,255,255,0.4); }
+    
     .stat-card {
         background: rgba(255,255,255,0.03);
         border-radius: 12px;
@@ -142,8 +154,6 @@ st.markdown("""
 # ============================================
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "last_prompt" not in st.session_state:
-    st.session_state.last_prompt = ""
 
 # ============================================
 # SIDEBAR
@@ -218,11 +228,25 @@ if not st.session_state.messages:
 else:
     for i, msg in enumerate(st.session_state.messages):
         if msg.get("role") == "user":
-            with st.chat_message("user"):
-                st.markdown(msg.get("content", ""))
+            st.markdown(f"""
+            <div class="chat-user">
+                <strong>👤 Siz</strong>
+                <div>{msg.get("content", "")}</div>
+                <div class="chat-time">{datetime.now().strftime("%H:%M")}</div>
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            with st.chat_message("assistant"):
-                st.markdown(msg.get("content", ""))
+            st.markdown(f"""
+            <div class="chat-assistant">
+                <strong>🤖 Ahmet İRİŞ Asistanı</strong>
+                <div>{msg.get("content", "")}</div>
+                <div class="chat-time">{datetime.now().strftime("%H:%M")}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Ses butonu
+            col1, col2 = st.columns([1, 10])
+            with col1:
                 if st.button("🔊", key=f"audio_{i}", help="Sesli dinle"):
                     try:
                         tts = gTTS(text=msg.get("content", "")[:500], lang='tr', slow=False)
@@ -232,24 +256,20 @@ else:
                         st.error("❌ Ses oluşturulamadı")
 
 # ============================================
-# GIRDI - DÜZELTİLDİ
+# GIRDI
 # ============================================
 prompt = st.chat_input("Mesajını yaz...")
 
 if prompt:
-    # Prompt'u kaydet
-    st.session_state.last_prompt = prompt
-    # Kullanıcı mesajını ekle
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.rerun()
 
 # ============================================
-# API İSLEME - DÜZELTİLDİ
+# API İSLEME
 # ============================================
 if st.session_state.messages:
     last_msg = st.session_state.messages[-1]
     
-    # Eğer son mesaj kullanıcı mesajıysa ve cevap yoksa
     if last_msg.get("role") == "user":
         with st.spinner("🧠 Düşünüyor..."):
             try:
@@ -285,7 +305,6 @@ Cevaplarında emoji kullan, profesyonel ve teknik ol.
                             "content": msg.get("content", "").strip()
                         })
                 
-                # Son mesajı ekle
                 messages.append({"role": "user", "content": prompt_text.strip()})
                 
                 # API çağrısı
