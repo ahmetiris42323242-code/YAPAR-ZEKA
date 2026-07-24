@@ -13,7 +13,7 @@ OPENROUTER_API_KEY = "sk-or-v1-8ceb4e6a0d4d4b2da28f76348475a0ca54fc54268f23b5e06
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # ============================================
-# MODEL - GPT-4o-mini (ÜCRETSİZ)
+# MODEL - GPT-4o-mini
 # ============================================
 MODEL = "openai/gpt-4o-mini"
 
@@ -34,7 +34,7 @@ st.set_page_config(
 )
 
 # ============================================
-# PROFESYONEL CSS
+# PROFESYONEL CSS (KISA)
 # ============================================
 st.markdown("""
 <style>
@@ -48,7 +48,6 @@ st.markdown("""
         text-align: center;
         padding: 10px 0 0 0;
         margin-bottom: 0;
-        letter-spacing: -0.5px;
     }
     .sub-title {
         text-align: center;
@@ -68,7 +67,6 @@ st.markdown("""
         font-size: 0.7rem;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
     }
     .badge-success { background: #059669; }
     .sidebar-header {
@@ -82,14 +80,6 @@ st.markdown("""
     .sidebar-header .avatar { font-size: 3.5rem; margin-bottom: 4px; }
     .sidebar-header h3 { margin: 4px 0; font-weight: 600; font-size: 1.1rem; }
     .sidebar-header p { opacity: 0.8; font-size: 0.8rem; margin: 0; }
-    .sidebar-header .version {
-        display: inline-block;
-        background: rgba(255,255,255,0.2);
-        padding: 2px 12px;
-        border-radius: 12px;
-        font-size: 0.7rem;
-        margin-top: 6px;
-    }
     .chat-user {
         background: linear-gradient(135deg, #2563eb, #7c3aed);
         color: white;
@@ -117,7 +107,6 @@ st.markdown("""
         margin-top: 6px;
         text-align: right;
     }
-    .chat-user .chat-time { color: rgba(255,255,255,0.6); }
     @keyframes slideInRight {
         from { opacity: 0; transform: translateX(30px); }
         to { opacity: 1; transform: translateX(0); }
@@ -132,9 +121,7 @@ st.markdown("""
         padding: 16px 20px;
         text-align: center;
         border: 1px solid rgba(255,255,255,0.05);
-        transition: all 0.3s;
     }
-    .stat-card:hover { background: rgba(255,255,255,0.06); transform: translateY(-2px); }
     .stat-number {
         font-size: 2.2rem;
         font-weight: 700;
@@ -155,12 +142,7 @@ st.markdown("""
         color: white !important;
         border: none !important;
         font-weight: 600 !important;
-        transition: all 0.3s !important;
         padding: 10px 24px !important;
-    }
-    .stButton > button:hover {
-        transform: scale(1.02) !important;
-        box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4) !important;
     }
     .stTextInput > div > div > input {
         border-radius: 50px !important;
@@ -169,10 +151,6 @@ st.markdown("""
         background: rgba(255,255,255,0.05) !important;
         color: white !important;
         font-size: 1rem !important;
-    }
-    .stTextInput > div > div > input:focus {
-        border-color: #2563eb !important;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
     }
     .footer {
         text-align: center;
@@ -185,7 +163,6 @@ st.markdown("""
     @media (max-width: 768px) {
         .main-title { font-size: 1.8rem; }
         .chat-user, .chat-assistant { max-width: 90%; padding: 10px 14px; font-size: 0.9rem; }
-        .stat-number { font-size: 1.5rem; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -203,13 +180,12 @@ with st.sidebar:
         <div class="avatar">🤖</div>
         <h3>Ahmet İRİŞ</h3>
         <p>Senior Yazılım Mimarı</p>
-        <span class="version">v3.0</span>
     </div>
     """, unsafe_allow_html=True)
     
     st.subheader("🎨 Görsel Atölyesi")
     with st.form("gorsel_form", clear_on_submit=True):
-        g_prompt = st.text_input("Ne çizelim?", placeholder="Örn: uzay gemisi, orman...")
+        g_prompt = st.text_input("Ne çizelim?", placeholder="Örn: uzay gemisi...")
         submitted = st.form_submit_button("🎨 Görseli Oluştur", use_container_width=True)
     
     if submitted and g_prompt:
@@ -265,7 +241,6 @@ if not st.session_state.messages:
         <div style="font-size:3rem;">👋</div>
         <h3 style="color:#94a3b8;">Merhaba! Sohbete başlayalım.</h3>
         <p style="color:#64748b;">Aşağıdan bir soru sorun, AI asistan cevaplasın.</p>
-        <p style="color:#64748b;font-size:0.85rem;">💡 Teknik, yaratıcı veya genel sorular sorabilirsiniz.</p>
     </div>
     """, unsafe_allow_html=True)
 else:
@@ -294,7 +269,7 @@ with col2:
     uploaded_file = st.file_uploader("📎 Dosya", type=['txt', 'md', 'jpg', 'png'], label_visibility="collapsed", key="file_uploader")
 
 # ============================================
-# MESAJ İŞLEME
+# MESAJ İŞLEME - DÜZELTİLDİ
 # ============================================
 if prompt:
     file_info = f"\n\n📎 **Dosya:** {uploaded_file.name}" if uploaded_file else ""
@@ -303,43 +278,54 @@ if prompt:
 
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     with st.spinner("🧠 GPT-4o-mini düşünüyor..."):
-        user_loc = get_user_location()
-        
         try:
-            with DDGS() as ddgs:
-                results = list(ddgs.text(f"{prompt} konum: {user_loc}", max_results=2))
-                search_context = f"\n\n🔍 **Güncel Bilgi** ({user_loc}):\n"
-                for i, r in enumerate(results, 1):
-                    search_context += f"{i}. {r.get('title', '')}\n   {r.get('body', '')[:200]}...\n"
-        except:
+            user_loc = get_user_location()
+            
+            # Web araması
             search_context = ""
+            try:
+                with DDGS() as ddgs:
+                    results = list(ddgs.text(f"{prompt} konum: {user_loc}", max_results=2))
+                    if results:
+                        search_context = f"\n\n🔍 **Güncel Bilgi** ({user_loc}):\n"
+                        for i, r in enumerate(results, 1):
+                            search_context += f"{i}. {r.get('title', '')}\n   {r.get('body', '')[:200]}...\n"
+            except:
+                pass
 
-        system_prompt = f"""Sen Ahmet İRİŞ'in asistanısın. 
+            # Sistem promptu - BOŞ DEĞİL!
+            system_prompt = f"""Sen Ahmet İRİŞ'in asistanısın. 
 Ahmet İRİŞ bu projenin kurucusu, sahibi ve Senior Yazılım Mimarıdır. 
 Seni o tasarladı ve geliştirdi. Projelerini (Cerberus, Arduino, Hot Wheels, oyun modifikasyonları) bilirsin.
 Cevaplarında uygun emojiler kullan, profesyonel ve teknik bir dil benimse.
 {search_context}"""
-        
-        messages = [{"role": "system", "content": system_prompt}]
-        for msg in st.session_state.messages[:-1]:
-            messages.append({"role": msg["role"], "content": msg["content"]})
-        messages.append({"role": "user", "content": prompt})
-        
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://localhost:8501",
-            "X-Title": "Ahmet IRIS Asistani"
-        }
-        
-        payload = {
-            "model": MODEL,
-            "messages": messages,
-            "temperature": 0.3,
-            "max_tokens": 2000
-        }
-        
-        try:
+            
+            # Mesajları hazırla - BOŞ KONTROLÜ!
+            messages = [{"role": "system", "content": system_prompt.strip()}]
+            
+            # Son mesaj hariç tüm mesajları ekle
+            for msg in st.session_state.messages[:-1]:
+                if msg.get("content") and msg["content"].strip():  # Boş değilse ekle
+                    messages.append({"role": msg["role"], "content": msg["content"].strip()})
+            
+            # Son kullanıcı mesajını ekle
+            messages.append({"role": "user", "content": prompt.strip()})
+            
+            # API çağrısı
+            headers = {
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://localhost:8501",
+                "X-Title": "Ahmet IRIS Asistani"
+            }
+            
+            payload = {
+                "model": MODEL,
+                "messages": messages,
+                "temperature": 0.3,
+                "max_tokens": 2000
+            }
+            
             response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=60)
             
             if response.status_code == 200:
@@ -348,7 +334,7 @@ Cevaplarında uygun emojiler kullan, profesyonel ve teknik bir dil benimse.
                 st.rerun()
             else:
                 st.error(f"⚠️ API Hatası: {response.status_code}")
-                st.code(response.text[:300])
+                st.code(response.text[:500])
                 st.stop()
                 
         except Exception as e:
@@ -360,12 +346,8 @@ Cevaplarında uygun emojiler kullan, profesyonel ve teknik bir dil benimse.
 # ============================================
 st.markdown("""
 <div class="footer">
-    🤖 Ahmet İRİŞ Asistanı v3.0 | 
-    <span style="color:#dc2626;">❤️</span> 
-    Senior Yazılım Mimarı | © 2026
+    🤖 Ahmet İRİŞ Asistanı v3.0 | ❤️ Senior Yazılım Mimarı | © 2026
     <br>
-    <span style="color:#475569;font-size:0.65rem;">
-        ⚡ GPT-4o-mini | Web Arama | Görsel Üretim | Sesli Yanıt
-    </span>
+    <span style="color:#475569;font-size:0.65rem;">⚡ GPT-4o-mini | Web Arama | Görsel Üretim | Sesli Yanıt</span>
 </div>
 """, unsafe_allow_html=True)
