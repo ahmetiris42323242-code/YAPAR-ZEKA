@@ -138,10 +138,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================
-# OTURUM - GÜVENLİ BAŞLAT
+# OTURUM
 # ============================================
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "last_prompt" not in st.session_state:
+    st.session_state.last_prompt = ""
 
 # ============================================
 # SIDEBAR
@@ -170,10 +172,7 @@ with st.sidebar:
     st.subheader("📊 İstatistikler")
     col1, col2 = st.columns(2)
     with col1:
-        try:
-            user_msgs = len([m for m in st.session_state.messages if m and m.get("role") == "user"])
-        except:
-            user_msgs = 0
+        user_msgs = len([m for m in st.session_state.messages if m.get("role") == "user"])
         st.markdown(f"""
         <div class="stat-card">
             <div class="stat-number">{user_msgs}</div>
@@ -181,10 +180,7 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
     with col2:
-        try:
-            assistant_msgs = len([m for m in st.session_state.messages if m and m.get("role") == "assistant"])
-        except:
-            assistant_msgs = 0
+        assistant_msgs = len([m for m in st.session_state.messages if m.get("role") == "assistant"])
         st.markdown(f"""
         <div class="stat-card">
             <div class="stat-number">{assistant_msgs}</div>
@@ -221,51 +217,55 @@ if not st.session_state.messages:
     """, unsafe_allow_html=True)
 else:
     for i, msg in enumerate(st.session_state.messages):
-        if msg and msg.get("role") == "user":
+        if msg.get("role") == "user":
             with st.chat_message("user"):
-                st.markdown(str(msg.get("content", "")))
-        elif msg and msg.get("role") == "assistant":
+                st.markdown(msg.get("content", ""))
+        else:
             with st.chat_message("assistant"):
-                st.markdown(str(msg.get("content", "")))
-                col1, col2 = st.columns([1, 10])
-                with col1:
-                    if st.button("🔊", key=f"audio_{i}", help="Sesli dinle"):
-                        try:
-                            tts = gTTS(text=str(msg.get("content", ""))[:500], lang='tr', slow=False)
-                            tts.save("cevap.mp3")
-                            st.audio("cevap.mp3")
-                        except:
-                            st.error("❌ Ses oluşturulamadı")
+                st.markdown(msg.get("content", ""))
+                if st.button("🔊", key=f"audio_{i}", help="Sesli dinle"):
+                    try:
+                        tts = gTTS(text=msg.get("content", "")[:500], lang='tr', slow=False)
+                        tts.save("cevap.mp3")
+                        st.audio("cevap.mp3")
+                    except:
+                        st.error("❌ Ses oluşturulamadı")
 
 # ============================================
-# GIRDI
+# GIRDI - DÜZELTİLDİ
 # ============================================
 prompt = st.chat_input("Mesajını yaz...")
 
-if prompt and prompt.strip():
-    st.session_state.messages.append({"role": "user", "content": prompt.strip()})
+if prompt:
+    # Prompt'u kaydet
+    st.session_state.last_prompt = prompt
+    # Kullanıcı mesajını ekle
+    st.session_state.messages.append({"role": "user", "content": prompt})
     st.rerun()
 
 # ============================================
-# API İSLEME - GÜVENLİ
+# API İSLEME - DÜZELTİLDİ
 # ============================================
 if st.session_state.messages:
     last_msg = st.session_state.messages[-1]
-    if last_msg and last_msg.get("role") == "user":
+    
+    # Eğer son mesaj kullanıcı mesajıysa ve cevap yoksa
+    if last_msg.get("role") == "user":
         with st.spinner("🧠 Düşünüyor..."):
             try:
                 user_loc = get_user_location()
+                prompt_text = last_msg.get("content", "")
                 
                 # Web araması
                 search_context = ""
                 try:
                     with DDGS() as ddgs:
-                        results = list(ddgs.text(prompt, max_results=2))
+                        results = list(ddgs.text(prompt_text, max_results=2))
                         if results:
                             search_context = f"\n🔍 Güncel Bilgi ({user_loc}):\n"
                             for r in results[:2]:
-                                if r and r.get("title"):
-                                    search_context += f"• {str(r.get('title', ''))[:100]}\n"
+                                if r.get("title"):
+                                    search_context += f"• {r.get('title', '')[:100]}\n"
                 except:
                     pass
                 
@@ -275,24 +275,18 @@ Ahmet İRİŞ projenin kurucusu ve Senior Yazılım Mimarıdır.
 Cevaplarında emoji kullan, profesyonel ve teknik ol.
 {search_context}"""
                 
-                # Mesajları hazırla - GÜVENLİ
+                # Mesajları hazırla
                 messages = [{"role": "system", "content": system_prompt.strip()}]
                 
                 for msg in st.session_state.messages[:-1]:
-                    if msg and msg.get("content"):
-                        content = str(msg.get("content", "")).strip()
-                        if content:
-                            messages.append({
-                                "role": str(msg.get("role", "user")),
-                                "content": content
-                            })
+                    if msg.get("content"):
+                        messages.append({
+                            "role": msg.get("role", "user"),
+                            "content": msg.get("content", "").strip()
+                        })
                 
                 # Son mesajı ekle
-                if prompt and prompt.strip():
-                    messages.append({"role": "user", "content": prompt.strip()})
-                else:
-                    st.error("❌ Mesaj boş olamaz!")
-                    st.stop()
+                messages.append({"role": "user", "content": prompt_text.strip()})
                 
                 # API çağrısı
                 headers = {
@@ -312,18 +306,14 @@ Cevaplarında emoji kullan, profesyonel ve teknik ol.
                 
                 if response.status_code == 200:
                     data = response.json()
-                    if data and data.get("choices") and data["choices"][0].get("message"):
-                        answer = data["choices"][0]["message"]["content"]
-                        if answer:
-                            st.session_state.messages.append({"role": "assistant", "content": answer})
-                            st.rerun()
-                        else:
-                            st.error("❌ Boş cevap alındı!")
+                    answer = data["choices"][0]["message"]["content"]
+                    if answer:
+                        st.session_state.messages.append({"role": "assistant", "content": answer})
+                        st.rerun()
                     else:
-                        st.error("❌ Geçersiz API yanıtı!")
+                        st.error("❌ Boş cevap alındı!")
                 else:
                     st.error(f"⚠️ API Hatası: {response.status_code}")
-                    st.code(str(response.text)[:500])
                     
             except Exception as e:
                 st.error(f"❌ Hata: {str(e)}")
