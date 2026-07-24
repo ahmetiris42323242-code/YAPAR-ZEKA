@@ -9,10 +9,11 @@ from duckduckgo_search import DDGS
 from gtts import gTTS
 
 # ============================================
-# API ANAHTARI - DOĞRUDAN GİRİLDİ
+# API ANAHTARI - GEMINI STUDIO'DAN ALINAN
 # ============================================
 API_KEY = "AQ.Ab8RN6Kx-XrAMbP26NxeBiBulwHHe6u2UNXCT5GORD01IZWsTw"
-API_URL = "https://router.flatkey.ai/v1/chat/completions"
+# Gemini API URL - DOĞRU FORMAT!
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={API_KEY}"
 
 # ============================================
 # SAYFA AYARLARI
@@ -183,25 +184,51 @@ def text_to_speech(text):
     except:
         return False
 
-def call_api(messages, model="gpt-4o-mini", temperature=0.7):
-    """API'yi çağır - Flatkey.ai"""
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
-    }
+def call_gemini_api(messages, temperature=0.7):
+    """Gemini API'yi çağır"""
     
+    # Gemini formatına dönüştür
+    formatted_messages = []
+    for msg in messages:
+        if msg["role"] == "system":
+            # System mesajını context olarak ekle
+            formatted_messages.append({
+                "role": "user",
+                "parts": [{"text": f"Sistem notu: {msg['content']}"}]
+            })
+        elif msg["role"] == "user":
+            formatted_messages.append({
+                "role": "user",
+                "parts": [{"text": msg["content"]}]
+            })
+        elif msg["role"] == "assistant":
+            formatted_messages.append({
+                "role": "model",
+                "parts": [{"text": msg["content"]}]
+            })
+    
+    # Gemini payload
     payload = {
-        "model": model,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": 2000
+        "contents": formatted_messages,
+        "generationConfig": {
+            "temperature": temperature,
+            "maxOutputTokens": 2000,
+            "topP": 0.95,
+            "topK": 40
+        }
     }
     
     try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+        response = requests.post(GEMINI_URL, json=payload, timeout=60)
         
         if response.status_code == 200:
-            return response.json()['choices'][0]['message']['content']
+            data = response.json()
+            # Gemini yanıtını parse et
+            try:
+                answer = data['candidates'][0]['content']['parts'][0]['text']
+                return answer, None
+            except:
+                return None, "Yanıt parse edilemedi!"
         else:
             return None, f"API Hatası: {response.status_code} - {response.text[:200]}"
             
@@ -276,10 +303,10 @@ st.markdown('<p class="sub-title">Senior Yazılım Mimarı | 2026</p>', unsafe_a
 
 # Dev mod göstergesi
 if st.session_state.is_dev_mode:
-    st.markdown('<span class="dev-badge" style="display:inline-block;margin-bottom:10px;">🚀 DEV MOD AKTİF - GPT-4O KULLANILIYOR</span>', unsafe_allow_html=True)
+    st.markdown('<span class="dev-badge" style="display:inline-block;margin-bottom:10px;">🚀 DEV MOD AKTİF - GEMINI PRO KULLANILIYOR</span>', unsafe_allow_html=True)
 
 # API Durumu
-st.info(f"🔑 API Anahtarı: {API_KEY[:15]}... (Flatkey.ai)")
+st.info(f"🔑 Gemini API Anahtarı: {API_KEY[:15]}... (Google Gemini Pro)")
 
 st.divider()
 
@@ -351,9 +378,6 @@ if prompt:
     with st.spinner("🔍 Web'de aranıyor..."):
         search_context = search_web(f"{prompt} konum: {user_loc}")
     
-    # Model seçimi
-    model = "gpt-4o" if st.session_state.is_dev_mode else "gpt-4o-mini"
-    
     # Sistem promptu
     system_prompt = f"""Sen Ahmet İRİŞ'in kişisel asistanısın.
 
@@ -374,15 +398,18 @@ if prompt:
 {search_context}
 """
     
-    # Mesaj geçmişini hazırla
+    # Mesaj geçmişini hazırla (Gemini formatı için)
     messages = [{"role": "system", "content": system_prompt}]
     for msg in st.session_state.messages[:-1]:
-        messages.append({"role": msg["role"], "content": msg["content"]})
+        if msg["role"] == "user":
+            messages.append({"role": "user", "content": msg["content"]})
+        elif msg["role"] == "assistant":
+            messages.append({"role": "assistant", "content": msg["content"]})
     messages.append({"role": "user", "content": prompt})
     
     # API çağrısı
-    with st.spinner(f"🧠 {model} düşünüyor..."):
-        answer, error = call_api(messages, model)
+    with st.spinner(f"🧠 Gemini Pro düşünüyor..."):
+        answer, error = call_gemini_api(messages)
     
     if answer:
         st.session_state.messages.append({
@@ -426,6 +453,6 @@ st.markdown("""
 <div class="footer">
     🤖 Ahmet İRİŞ Asistanı v2.0 | Senior Yazılım Mimarı | © 2026
     <br>
-    <span style="color:#475569;font-size:0.65rem;">Güç: GPT-4o | Web Arama | Görsel Üretim | Sesli Yanıt</span>
+    <span style="color:#475569;font-size:0.65rem;">Güç: Google Gemini Pro | Web Arama | Görsel Üretim | Sesli Yanıt</span>
 </div>
 """, unsafe_allow_html=True)
