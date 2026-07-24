@@ -1,9 +1,6 @@
 import streamlit as st
 import requests
-import base64
 import random
-import os
-import json
 from datetime import datetime
 from duckduckgo_search import DDGS
 from gtts import gTTS
@@ -12,8 +9,18 @@ from gtts import gTTS
 # API ANAHTARI - GEMINI STUDIO'DAN ALINAN
 # ============================================
 API_KEY = "AQ.Ab8RN6Kx-XrAMbP26NxeBiBulwHHe6u2UNXCT5GORD01IZWsTw"
-# Gemini API URL - DOĞRU FORMAT!
+
+# ============================================
+# DOĞRU GEMINI API URL'LERİ
+# ============================================
+# Seçenek 1: Gemini Pro (En iyi model)
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={API_KEY}"
+
+# Seçenek 2: Gemini 1.5 Flash (Hızlı ve ücretsiz)
+# GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+
+# Seçenek 3: Gemini 1.5 Pro (En gelişmiş)
+# GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={API_KEY}"
 
 # ============================================
 # SAYFA AYARLARI
@@ -21,12 +28,11 @@ GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pr
 st.set_page_config(
     page_title="Ahmet İRİŞ Asistanı",
     page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
 # ============================================
-# CSS - PROFESYONEL TEMA
+# CSS
 # ============================================
 st.markdown("""
 <style>
@@ -38,7 +44,6 @@ st.markdown("""
         font-weight: 800;
         text-align: center;
         padding: 10px 0;
-        margin-bottom: 0;
     }
     .sub-title {
         text-align: center;
@@ -46,16 +51,6 @@ st.markdown("""
         font-size: 0.9rem;
         margin-top: -5px;
         margin-bottom: 20px;
-    }
-    .badge {
-        display: inline-block;
-        background: linear-gradient(135deg, #2563eb, #7c3aed);
-        color: white;
-        padding: 4px 16px;
-        border-radius: 20px;
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
     }
     .chat-user {
         background: linear-gradient(135deg, #2563eb, #7c3aed);
@@ -137,26 +132,19 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "is_dev_mode" not in st.session_state:
     st.session_state.is_dev_mode = False
-if "conversation_count" not in st.session_state:
-    st.session_state.conversation_count = 0
 
 # ============================================
 # YARDIMCI FONKSİYONLAR
 # ============================================
 def get_user_location():
-    """Kullanıcının konumunu tespit et"""
     try:
         res = requests.get('https://ipinfo.io/', timeout=3)
         data = res.json()
-        city = data.get('city', 'Isparta')
-        region = data.get('region', 'Türkiye')
-        country = data.get('country', 'TR')
-        return f"{city}, {region} ({country})"
+        return f"{data.get('city', 'Isparta')}, {data.get('region', 'Türkiye')}"
     except:
         return "Isparta, Türkiye"
 
 def search_web(query, max_results=3):
-    """Web araması yap"""
     try:
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=max_results))
@@ -170,13 +158,10 @@ def search_web(query, max_results=3):
         return f"\n\n⚠️ Arama hatası: {str(e)}"
 
 def generate_image(prompt):
-    """Görsel oluştur"""
     seed = random.randint(1, 999999)
-    img_url = f"https://pollinations.ai/p/{prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={seed}"
-    return img_url
+    return f"https://pollinations.ai/p/{prompt.replace(' ', '%20')}?width=1024&height=1024&nologo=true&seed={seed}"
 
 def text_to_speech(text):
-    """Metni sese çevir"""
     try:
         tts = gTTS(text=text[:500], lang='tr', slow=False)
         tts.save("cevap.mp3")
@@ -185,31 +170,38 @@ def text_to_speech(text):
         return False
 
 def call_gemini_api(messages, temperature=0.7):
-    """Gemini API'yi çağır"""
+    """Gemini API'yi çağır - DOĞRU FORMAT"""
     
     # Gemini formatına dönüştür
-    formatted_messages = []
+    contents = []
+    
+    # Sistem mesajını ekle
+    system_text = ""
     for msg in messages:
         if msg["role"] == "system":
-            # System mesajını context olarak ekle
-            formatted_messages.append({
-                "role": "user",
-                "parts": [{"text": f"Sistem notu: {msg['content']}"}]
-            })
-        elif msg["role"] == "user":
-            formatted_messages.append({
+            system_text = msg["content"]
+            break
+    
+    # Kullanıcı ve asistan mesajlarını ekle
+    for msg in messages:
+        if msg["role"] == "user":
+            contents.append({
                 "role": "user",
                 "parts": [{"text": msg["content"]}]
             })
         elif msg["role"] == "assistant":
-            formatted_messages.append({
+            contents.append({
                 "role": "model",
                 "parts": [{"text": msg["content"]}]
             })
     
+    # Sistem mesajını ilk kullanıcı mesajına ekle
+    if system_text and contents:
+        contents[0]["parts"][0]["text"] = f"{system_text}\n\n{contents[0]['parts'][0]['text']}"
+    
     # Gemini payload
     payload = {
-        "contents": formatted_messages,
+        "contents": contents,
         "generationConfig": {
             "temperature": temperature,
             "maxOutputTokens": 2000,
@@ -223,21 +215,20 @@ def call_gemini_api(messages, temperature=0.7):
         
         if response.status_code == 200:
             data = response.json()
-            # Gemini yanıtını parse et
             try:
                 answer = data['candidates'][0]['content']['parts'][0]['text']
                 return answer, None
             except:
-                return None, "Yanıt parse edilemedi!"
+                return None, f"Yanıt parse edilemedi: {data}"
         else:
-            return None, f"API Hatası: {response.status_code} - {response.text[:200]}"
+            return None, f"API Hatası ({response.status_code}): {response.text[:300]}"
             
     except requests.exceptions.Timeout:
         return None, "Bağlantı zaman aşımı! Lütfen tekrar deneyin."
     except requests.exceptions.ConnectionError:
         return None, "Bağlantı hatası! İnternet bağlantınızı kontrol edin."
     except Exception as e:
-        return None, f"Beklenmeyen hata: {str(e)}"
+        return None, f"Hata: {str(e)}"
 
 # ============================================
 # SİDEBAR
@@ -252,7 +243,6 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # ===== GELİŞTİRİCİ PANELİ =====
     st.subheader("⚙️ Geliştirici Paneli")
     
     with st.expander("🔐 Geliştirici Modu", expanded=False):
@@ -272,22 +262,16 @@ with st.sidebar:
     
     st.divider()
     
-    # ===== GÖRSEL ATÖLYESİ =====
     st.subheader("🎨 Görsel Atölyesi")
-    
     with st.form("gorsel_form", clear_on_submit=True):
-        g_prompt = st.text_input("Ne çizelim?", placeholder="Örn: uzay gemisi, orman...")
-        submitted = st.form_submit_button("🎨 Görseli Oluştur", use_container_width=True)
-    
-    if submitted and g_prompt:
-        with st.spinner("🎨 Görsel oluşturuluyor..."):
-            img_url = generate_image(g_prompt)
-            st.image(img_url, caption=f"🎨 {g_prompt}", use_container_width=True)
-            st.success("✅ Görsel hazır!")
+        g_prompt = st.text_input("Ne çizelim?")
+        if st.form_submit_button("🎨 Görseli Oluştur", use_container_width=True):
+            if g_prompt:
+                img_url = generate_image(g_prompt)
+                st.image(img_url, caption=f"🎨 {g_prompt}", use_container_width=True)
     
     st.divider()
     
-    # ===== İSTATİSTİKLER =====
     st.subheader("📊 İstatistikler")
     col1, col2 = st.columns(2)
     with col1:
@@ -301,12 +285,11 @@ with st.sidebar:
 st.markdown('<h1 class="main-title">🤖 Ahmet İRİŞ Asistanı</h1>', unsafe_allow_html=True)
 st.markdown('<p class="sub-title">Senior Yazılım Mimarı | 2026</p>', unsafe_allow_html=True)
 
-# Dev mod göstergesi
 if st.session_state.is_dev_mode:
-    st.markdown('<span class="dev-badge" style="display:inline-block;margin-bottom:10px;">🚀 DEV MOD AKTİF - GEMINI PRO KULLANILIYOR</span>', unsafe_allow_html=True)
+    st.markdown('<span class="dev-badge" style="display:inline-block;margin-bottom:10px;">🚀 DEV MOD AKTİF</span>', unsafe_allow_html=True)
 
-# API Durumu
-st.info(f"🔑 Gemini API Anahtarı: {API_KEY[:15]}... (Google Gemini Pro)")
+# API durumu
+st.info(f"🔑 Gemini API: {API_KEY[:15]}... | Model: gemini-pro")
 
 st.divider()
 
@@ -325,90 +308,51 @@ for i, msg in enumerate(st.session_state.messages):
     else:
         st.markdown(f"""
         <div class="chat-assistant">
-            <strong>🤖 Ahmet İRİŞ Asistanı</strong>
+            <strong>🤖 Asistan</strong>
             <div>{msg["content"]}</div>
             <div class="chat-time">{msg.get("time", datetime.now().strftime("%H:%M"))}</div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Ses butonu
         col1, col2 = st.columns([1, 10])
         with col1:
             if st.button(f"🔊", key=f"audio_{i}"):
-                with st.spinner("🎤 Ses oluşturuluyor..."):
-                    if text_to_speech(msg["content"]):
-                        st.audio("cevap.mp3")
-                        st.success("✅ Ses hazır!")
-                    else:
-                        st.error("❌ Ses oluşturulamadı!")
+                if text_to_speech(msg["content"]):
+                    st.audio("cevap.mp3")
 
 # ============================================
-# GİRDİ ALANI
+# GİRDİ
 # ============================================
-col1, col2 = st.columns([0.9, 0.1])
+prompt = st.chat_input("Mesajını yaz...")
 
-with col1:
-    prompt = st.chat_input("Mesajını yaz...", key="main_chat_input")
-
-with col2:
-    uploaded_file = st.file_uploader(
-        "📎 Dosya",
-        type=['txt', 'md', 'pdf', 'jpg', 'png'],
-        label_visibility="collapsed"
-    )
-
-# ============================================
-# MESAJ İŞLEME
-# ============================================
 if prompt:
-    # Kullanıcı mesajını ekle
-    file_info = f"\n\n📎 **Dosya:** {uploaded_file.name}" if uploaded_file else ""
-    user_message = prompt + file_info
-    
     st.session_state.messages.append({
         "role": "user",
-        "content": user_message,
+        "content": prompt,
         "time": datetime.now().strftime("%H:%M")
     })
     
-    # Konum tespiti
     user_loc = get_user_location()
     
-    # Web araması
-    with st.spinner("🔍 Web'de aranıyor..."):
-        search_context = search_web(f"{prompt} konum: {user_loc}")
+    with st.spinner("🔍 Araştırılıyor..."):
+        search_context = search_web(prompt)
     
-    # Sistem promptu
     system_prompt = f"""Sen Ahmet İRİŞ'in kişisel asistanısın.
-
-**ÖZELLİKLERİN:**
-- Ahmet İRİŞ bu projenin kurucusu, sahibi ve Senior Yazılım Mimarıdır
-- Seni o tasarladı ve geliştirdi
-- Projeleri: Cerberus, Arduino, Hot Wheels, oyun modifikasyonları
-- Uzmanlık alanları: Python, C++, Embedded Systems, AI/ML
-
-**KURALLAR:**
+- Ahmet İRİŞ bu projenin kurucusu ve Senior Yazılım Mimarıdır
+- Projeleri: Cerberus, Arduino, Hot Wheels
+- Uzmanlık: Python, C++, Embedded Systems, AI/ML
 - Profesyonel ve teknik dil kullan
-- Uygun emojiler ile cevabı zenginleştir
-- Detaylı ve açıklayıcı ol
 - Kod örnekleri verirken doğru syntax kullan
-- Kullanıcının sorusunu tam anla
 
-**KONUM:** {user_loc}
+Konum: {user_loc}
 {search_context}
 """
     
-    # Mesaj geçmişini hazırla (Gemini formatı için)
     messages = [{"role": "system", "content": system_prompt}]
-    for msg in st.session_state.messages[:-1]:
-        if msg["role"] == "user":
-            messages.append({"role": "user", "content": msg["content"]})
-        elif msg["role"] == "assistant":
-            messages.append({"role": "assistant", "content": msg["content"]})
-    messages.append({"role": "user", "content": prompt})
+    for msg in st.session_state.messages:
+        messages.append({"role": msg["role"], "content": msg["content"]})
     
-    # API çağrısı
-    with st.spinner(f"🧠 Gemini Pro düşünüyor..."):
+    with st.spinner("🧠 Gemini Pro düşünüyor..."):
         answer, error = call_gemini_api(messages)
     
     if answer:
@@ -428,15 +372,15 @@ st.divider()
 st.caption("⚡ Hızlı Komutlar")
 
 cols = st.columns(5)
-quick_commands = [
-    ("💻 Kod Yaz", "Python'da bir web scraper yaz"),
-    ("📊 Analiz", "Veri analizi için en iyi yöntemler neler?"),
-    ("🎨 Tasarım", "Logo tasarımı için fikir ver"),
-    ("🔍 Ara", "Son yapay zeka haberleri neler?"),
+quick = [
+    ("💻 Kod", "Python'da web scraper yaz"),
+    ("📊 Analiz", "Veri analizi yöntemleri"),
+    ("🎨 Tasarım", "Logo fikirleri ver"),
+    ("🔍 Ara", "Yapay zeka haberleri"),
     ("📝 Özet", "Son konuşmayı özetle")
 ]
 
-for col, (label, action) in zip(cols, quick_commands):
+for col, (label, action) in zip(cols, quick):
     with col:
         if st.button(label, use_container_width=True):
             st.session_state.messages.append({
@@ -451,8 +395,6 @@ for col, (label, action) in zip(cols, quick_commands):
 # ============================================
 st.markdown("""
 <div class="footer">
-    🤖 Ahmet İRİŞ Asistanı v2.0 | Senior Yazılım Mimarı | © 2026
-    <br>
-    <span style="color:#475569;font-size:0.65rem;">Güç: Google Gemini Pro | Web Arama | Görsel Üretim | Sesli Yanıt</span>
+    🤖 Ahmet İRİŞ Asistanı v2.0 | Google Gemini Pro | © 2026
 </div>
 """, unsafe_allow_html=True)
