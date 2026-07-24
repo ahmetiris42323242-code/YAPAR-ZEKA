@@ -7,15 +7,15 @@ import random
 from datetime import datetime
 
 # ============================================
-# OPENROUTER API - SECRETS'DEN OKU
+# OPENROUTER API AYARLARI
 # ============================================
-OPENROUTER_API_KEY = st.secrets.get("OPENROUTER_API_KEY", "")
+OPENROUTER_API_KEY = "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"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # ============================================
-# MODEL - ÜCRETSİZ GPT-4 SEVİYESİ
+# MODEL - GPT-4o-mini (ÜCRETSİZ)
 # ============================================
-MODEL = "gemini-2.0-flash"
+MODEL = "openai/gpt-4o-mini"
 
 # --- YARDIMCI FONKSİYONLAR ---
 def get_user_location():
@@ -38,9 +38,7 @@ st.set_page_config(
 # ============================================
 st.markdown("""
 <style>
-    .stApp {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-    }
+    .stApp { background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); }
     .main-title {
         background: linear-gradient(135deg, #2563eb, #7c3aed);
         -webkit-background-clip: text;
@@ -72,9 +70,7 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
-    .badge-success {
-        background: #059669;
-    }
+    .badge-success { background: #059669; }
     .sidebar-header {
         background: linear-gradient(135deg, #2563eb, #7c3aed);
         padding: 24px 20px;
@@ -83,20 +79,9 @@ st.markdown("""
         color: white;
         margin-bottom: 20px;
     }
-    .sidebar-header .avatar {
-        font-size: 3.5rem;
-        margin-bottom: 4px;
-    }
-    .sidebar-header h3 {
-        margin: 4px 0;
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-    .sidebar-header p {
-        opacity: 0.8;
-        font-size: 0.8rem;
-        margin: 0;
-    }
+    .sidebar-header .avatar { font-size: 3.5rem; margin-bottom: 4px; }
+    .sidebar-header h3 { margin: 4px 0; font-weight: 600; font-size: 1.1rem; }
+    .sidebar-header p { opacity: 0.8; font-size: 0.8rem; margin: 0; }
     .sidebar-header .version {
         display: inline-block;
         background: rgba(255,255,255,0.2);
@@ -132,9 +117,7 @@ st.markdown("""
         margin-top: 6px;
         text-align: right;
     }
-    .chat-user .chat-time {
-        color: rgba(255,255,255,0.6);
-    }
+    .chat-user .chat-time { color: rgba(255,255,255,0.6); }
     @keyframes slideInRight {
         from { opacity: 0; transform: translateX(30px); }
         to { opacity: 1; transform: translateX(0); }
@@ -151,10 +134,7 @@ st.markdown("""
         border: 1px solid rgba(255,255,255,0.05);
         transition: all 0.3s;
     }
-    .stat-card:hover {
-        background: rgba(255,255,255,0.06);
-        transform: translateY(-2px);
-    }
+    .stat-card:hover { background: rgba(255,255,255,0.06); transform: translateY(-2px); }
     .stat-number {
         font-size: 2.2rem;
         font-weight: 700;
@@ -227,9 +207,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # ===== GÖRSEL ATÖLYESİ =====
     st.subheader("🎨 Görsel Atölyesi")
-    
     with st.form("gorsel_form", clear_on_submit=True):
         g_prompt = st.text_input("Ne çizelim?", placeholder="Örn: uzay gemisi, orman...")
         submitted = st.form_submit_button("🎨 Görseli Oluştur", use_container_width=True)
@@ -243,9 +221,7 @@ with st.sidebar:
     
     st.divider()
     
-    # ===== İSTATİSTİKLER =====
     st.subheader("📊 İstatistikler")
-    
     col1, col2 = st.columns(2)
     with col1:
         user_msgs = len([m for m in st.session_state.messages if m.get("role") == "user"])
@@ -274,7 +250,7 @@ st.markdown('<h1 class="main-title">🤖 Ahmet İRİŞ Asistanı</h1>', unsafe_a
 st.markdown("""
 <div class="sub-title">
     <span class="badge">Web Tabanlı</span>
-    <span class="badge badge-success">Yapay Zeka</span>
+    <span class="badge badge-success">GPT-4o-mini</span>
     <span style="color:#94a3b8;margin:0 8px;">|</span>
     <span style="color:#94a3b8;">By Ahmet İRİŞ | Senior Yazılım Mimarı 2026</span>
 </div>
@@ -312,32 +288,21 @@ else:
 # GİRDİ VE İŞLEME
 # ============================================
 col1, col2 = st.columns([0.9, 0.1])
-
 with col1:
     prompt = st.chat_input("Mesajını yaz...", key="main_chat_input")
-
 with col2:
-    uploaded_file = st.file_uploader(
-        "📎 Dosya", 
-        type=['txt', 'md', 'jpg', 'png'], 
-        label_visibility="collapsed",
-        key="file_uploader"
-    )
+    uploaded_file = st.file_uploader("📎 Dosya", type=['txt', 'md', 'jpg', 'png'], label_visibility="collapsed", key="file_uploader")
 
 # ============================================
-# MESAJ İŞLEME - OPENROUTER API
+# MESAJ İŞLEME
 # ============================================
 if prompt:
     file_info = f"\n\n📎 **Dosya:** {uploaded_file.name}" if uploaded_file else ""
-    
-    st.session_state.messages.append({
-        "role": "user", 
-        "content": prompt + file_info
-    })
+    st.session_state.messages.append({"role": "user", "content": prompt + file_info})
     st.rerun()
 
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
-    with st.spinner("🧠 Düşünüyor..."):
+    with st.spinner("🧠 GPT-4o-mini düşünüyor..."):
         user_loc = get_user_location()
         
         try:
@@ -379,10 +344,7 @@ Cevaplarında uygun emojiler kullan, profesyonel ve teknik bir dil benimse.
             
             if response.status_code == 200:
                 answer = response.json()['choices'][0]['message']['content']
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": answer
-                })
+                st.session_state.messages.append({"role": "assistant", "content": answer})
                 st.rerun()
             else:
                 st.error(f"⚠️ API Hatası: {response.status_code}")
@@ -403,7 +365,7 @@ st.markdown("""
     Senior Yazılım Mimarı | © 2026
     <br>
     <span style="color:#475569;font-size:0.65rem;">
-        ⚡ Gemini 2.0 Flash | Web Arama | Görsel Üretim | Sesli Yanıt
+        ⚡ GPT-4o-mini | Web Arama | Görsel Üretim | Sesli Yanıt
     </span>
 </div>
 """, unsafe_allow_html=True)
