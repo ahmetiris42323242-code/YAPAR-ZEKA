@@ -29,11 +29,12 @@ st.set_page_config(
 )
 
 # ============================================
-# CSS - ASİSTAN CEVAPLARI BEYAZ
+# CSS - KOD RENKLİ, METİN BEYAZ
 # ============================================
 st.markdown("""
 <style>
     .stApp { background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); }
+    
     .main-title {
         background: linear-gradient(135deg, #2563eb, #7c3aed);
         -webkit-background-clip: text;
@@ -61,6 +62,7 @@ st.markdown("""
         font-weight: 600;
     }
     .badge-success { background: #059669; }
+    
     .sidebar-header {
         background: linear-gradient(135deg, #2563eb, #7c3aed);
         padding: 20px;
@@ -73,7 +75,7 @@ st.markdown("""
     .sidebar-header h3 { margin: 4px 0; font-size: 1rem; }
     .sidebar-header p { opacity: 0.8; font-size: 0.8rem; margin: 0; }
     
-    /* KULLANICI MESAJI - MAVİ */
+    /* KULLANICI MESAJI */
     .chat-user {
         background: linear-gradient(135deg, #2563eb, #7c3aed);
         color: white;
@@ -84,10 +86,10 @@ st.markdown("""
         word-wrap: break-word;
     }
     
-    /* ASİSTAN MESAJI - BEYAZ */
+    /* ASİSTAN MESAJI - BEYAZ METİN */
     .chat-assistant {
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
         border-radius: 18px 18px 18px 4px;
         padding: 12px 18px;
         margin: 8px auto 8px 0;
@@ -99,6 +101,29 @@ st.markdown("""
     .chat-assistant * {
         color: #ffffff !important;
     }
+    
+    /* KOD BLOKLARI - RENKLİ */
+    .chat-assistant pre,
+    .chat-assistant code {
+        color: #e2e8f0 !important;
+        background: #0f172a !important;
+        border-radius: 8px !important;
+        padding: 12px !important;
+        font-family: 'Courier New', monospace !important;
+        font-size: 0.85rem !important;
+        overflow-x: auto !important;
+        border: 1px solid rgba(255,255,255,0.05) !important;
+    }
+    
+    /* Python anahtar kelimeleri */
+    .chat-assistant .hljs-keyword { color: #f472b6 !important; }
+    .chat-assistant .hljs-string { color: #34d399 !important; }
+    .chat-assistant .hljs-comment { color: #94a3b8 !important; font-style: italic !important; }
+    .chat-assistant .hljs-function { color: #60a5fa !important; }
+    .chat-assistant .hljs-class { color: #fbbf24 !important; }
+    .chat-assistant .hljs-number { color: #f472b6 !important; }
+    .chat-assistant .hljs-operator { color: #f472b6 !important; }
+    .chat-assistant .hljs-built_in { color: #60a5fa !important; }
     
     .chat-time { font-size: 0.6rem; color: #64748b; margin-top: 4px; text-align: right; }
     .chat-user .chat-time { color: rgba(255,255,255,0.6); }
@@ -119,6 +144,7 @@ st.markdown("""
         -webkit-text-fill-color: transparent;
     }
     .stat-label { color: #94a3b8; font-size: 0.7rem; text-transform: uppercase; margin-top: 4px; }
+    
     .stButton > button {
         border-radius: 50px !important;
         background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
