@@ -558,30 +558,6 @@ Cevaplarında uygun emojiler kullan, profesyonel ve teknik bir dil benimse.
             st.stop()
 
 # ============================================
-# HIZLI KOMUTLAR
-# ============================================
-st.divider()
-st.caption("⚡ Hızlı Komutlar")
-
-cols = st.columns(5)
-quick_commands = [
-    ("💻 Kod", "Python'da web scraper yaz"),
-    ("📊 Analiz", "Veri analizi için en iyi yöntemler neler?"),
-    ("🎨 Tasarım", "Logo tasarımı için fikir ver"),
-    ("🔍 Ara", "Son yapay zeka haberleri neler?"),
-    ("📝 Özet", "Son konuşmayı özetle")
-]
-
-for col, (label, action) in zip(cols, quick_commands):
-    with col:
-        if st.button(label, use_container_width=True, key=f"quick_{label}"):
-            st.session_state.messages.append({
-                "role": "user",
-                "content": action
-            })
-            st.rerun()
-
-# ============================================
 # FOOTER
 # ============================================
 st.markdown("""
