@@ -1,26 +1,31 @@
 import streamlit as st
 import requests
 import random
+import json
 from datetime import datetime
 from duckduckgo_search import DDGS
 from gtts import gTTS
 
 # ============================================
-# API ANAHTARI - GEMINI STUDIO'DAN ALINAN
+# OPENROUTER API AYARLARI
 # ============================================
-API_KEY = "AQ.Ab8RN6Kx-XrAMbP26NxeBiBulwHHe6u2UNXCT5GORD01IZWsTw"
+OPENROUTER_API_KEY = "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"
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # ============================================
-# DOĞRU GEMINI API URL'LERİ
+# EN İYİ ÜCRETSİZ MODELLER (OpenRouter)
 # ============================================
-# Seçenek 1: Gemini Pro (En iyi model)
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={API_KEY}"
-
-# Seçenek 2: Gemini 1.5 Flash (Hızlı ve ücretsiz)
-# GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
-
-# Seçenek 3: Gemini 1.5 Pro (En gelişmiş)
-# GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={API_KEY}"
+FREE_MODELS = {
+    "gemini-2.0-flash": "Google: Gemini 2.0 Flash (En iyi ücretsiz)",
+    "gemini-1.5-flash": "Google: Gemini 1.5 Flash (Hızlı)",
+    "gemini-1.5-pro": "Google: Gemini 1.5 Pro (Gelişmiş)",
+    "claude-3-haiku": "Anthropic: Claude 3 Haiku (Hızlı)",
+    "llama-3.1-70b": "Meta: Llama 3.1 70B (Güçlü)",
+    "llama-3.1-8b": "Meta: Llama 3.1 8B (Hafif)",
+    "mistral-7b": "Mistral: Mistral 7B (Hızlı)",
+    "mixtral-8x7b": "Mistral: Mixtral 8x7B (Güçlü)",
+    "deepseek-chat": "DeepSeek: DeepSeek Chat (Yeni)"
+}
 
 # ============================================
 # SAYFA AYARLARI
@@ -51,6 +56,15 @@ st.markdown("""
         font-size: 0.9rem;
         margin-top: -5px;
         margin-bottom: 20px;
+    }
+    .badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        color: white;
+        padding: 4px 16px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
     }
     .chat-user {
         background: linear-gradient(135deg, #2563eb, #7c3aed);
@@ -98,6 +112,14 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
+    .model-badge {
+        display: inline-block;
+        background: #059669;
+        color: white;
+        padding: 2px 12px;
+        border-radius: 12px;
+        font-size: 0.65rem;
+    }
     .footer {
         text-align: center;
         color: #475569;
@@ -105,18 +127,6 @@ st.markdown("""
         padding: 20px 0;
         border-top: 1px solid rgba(255,255,255,0.05);
         margin-top: 20px;
-    }
-    .dev-badge {
-        background: #059669;
-        color: white;
-        padding: 2px 12px;
-        border-radius: 12px;
-        font-size: 0.7rem;
-        animation: pulse 1.5s infinite;
-    }
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
     }
     @media (max-width: 768px) {
         .main-title { font-size: 1.8rem; }
@@ -126,12 +136,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================
-# OTURUM BAŞLAT
+# OTURUM
 # ============================================
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "is_dev_mode" not in st.session_state:
-    st.session_state.is_dev_mode = False
+if "selected_model" not in st.session_state:
+    st.session_state.selected_model = "gemini-2.0-flash"
 
 # ============================================
 # YARDIMCI FONKSİYONLAR
@@ -154,8 +164,8 @@ def search_web(query, max_results=3):
                     context += f"{i}. {r.get('title', '')}\n   {r.get('body', '')[:200]}...\n"
                 return context
             return ""
-    except Exception as e:
-        return f"\n\n⚠️ Arama hatası: {str(e)}"
+    except:
+        return ""
 
 def generate_image(prompt):
     seed = random.randint(1, 999999)
@@ -169,64 +179,33 @@ def text_to_speech(text):
     except:
         return False
 
-def call_gemini_api(messages, temperature=0.7):
-    """Gemini API'yi çağır - DOĞRU FORMAT"""
+def call_openrouter_api(messages, model, temperature=0.7):
+    """OpenRouter API çağrısı - En iyi ücretsiz modeller"""
     
-    # Gemini formatına dönüştür
-    contents = []
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://localhost:8501",
+        "X-Title": "Ahmet IRIS Asistani"
+    }
     
-    # Sistem mesajını ekle
-    system_text = ""
-    for msg in messages:
-        if msg["role"] == "system":
-            system_text = msg["content"]
-            break
-    
-    # Kullanıcı ve asistan mesajlarını ekle
-    for msg in messages:
-        if msg["role"] == "user":
-            contents.append({
-                "role": "user",
-                "parts": [{"text": msg["content"]}]
-            })
-        elif msg["role"] == "assistant":
-            contents.append({
-                "role": "model",
-                "parts": [{"text": msg["content"]}]
-            })
-    
-    # Sistem mesajını ilk kullanıcı mesajına ekle
-    if system_text and contents:
-        contents[0]["parts"][0]["text"] = f"{system_text}\n\n{contents[0]['parts'][0]['text']}"
-    
-    # Gemini payload
     payload = {
-        "contents": contents,
-        "generationConfig": {
-            "temperature": temperature,
-            "maxOutputTokens": 2000,
-            "topP": 0.95,
-            "topK": 40
-        }
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": 2000
     }
     
     try:
-        response = requests.post(GEMINI_URL, json=payload, timeout=60)
+        response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=60)
         
         if response.status_code == 200:
             data = response.json()
-            try:
-                answer = data['candidates'][0]['content']['parts'][0]['text']
-                return answer, None
-            except:
-                return None, f"Yanıt parse edilemedi: {data}"
+            answer = data['choices'][0]['message']['content']
+            return answer, None
         else:
             return None, f"API Hatası ({response.status_code}): {response.text[:300]}"
             
-    except requests.exceptions.Timeout:
-        return None, "Bağlantı zaman aşımı! Lütfen tekrar deneyin."
-    except requests.exceptions.ConnectionError:
-        return None, "Bağlantı hatası! İnternet bağlantınızı kontrol edin."
     except Exception as e:
         return None, f"Hata: {str(e)}"
 
@@ -239,32 +218,35 @@ with st.sidebar:
         <div style="font-size:3rem;">🤖</div>
         <h3>Ahmet İRİŞ</h3>
         <p>Senior Yazılım Mimarı</p>
-        <span class="badge">v2.0</span>
+        <span class="badge">v3.0</span>
     </div>
     """, unsafe_allow_html=True)
     
-    st.subheader("⚙️ Geliştirici Paneli")
+    # ===== MODEL SEÇİMİ =====
+    st.subheader("🧠 Model Seçimi")
     
-    with st.expander("🔐 Geliştirici Modu", expanded=False):
-        password = st.text_input("Şifre", type="password", placeholder="••••", key="dev_password")
-        if password == "7536":
-            st.session_state.is_dev_mode = True
-            st.success("✅ SÜPER ZEKA AKTİF")
-            st.balloons()
-        elif password:
-            st.error("❌ Geçersiz şifre!")
-        
-        if st.session_state.is_dev_mode:
-            st.markdown(f'<span class="dev-badge">🚀 DEV MOD AKTİF</span>', unsafe_allow_html=True)
-            if st.button("🔒 Modu Kapat", use_container_width=True):
-                st.session_state.is_dev_mode = False
-                st.rerun()
+    model_options = list(FREE_MODELS.keys())
+    model_labels = list(FREE_MODELS.values())
+    
+    selected_model = st.selectbox(
+        "En İyi Ücretsiz Modeller",
+        model_options,
+        format_func=lambda x: FREE_MODELS[x],
+        index=model_options.index(st.session_state.selected_model) if st.session_state.selected_model in model_options else 0
+    )
+    
+    if selected_model != st.session_state.selected_model:
+        st.session_state.selected_model = selected_model
+        st.rerun()
+    
+    st.markdown(f'<span class="model-badge">✅ {FREE_MODELS[selected_model]}</span>', unsafe_allow_html=True)
     
     st.divider()
     
+    # ===== GÖRSEL ATÖLYESİ =====
     st.subheader("🎨 Görsel Atölyesi")
     with st.form("gorsel_form", clear_on_submit=True):
-        g_prompt = st.text_input("Ne çizelim?")
+        g_prompt = st.text_input("Ne çizelim?", placeholder="Örn: uzay gemisi...")
         if st.form_submit_button("🎨 Görseli Oluştur", use_container_width=True):
             if g_prompt:
                 img_url = generate_image(g_prompt)
@@ -272,6 +254,7 @@ with st.sidebar:
     
     st.divider()
     
+    # ===== İSTATİSTİKLER =====
     st.subheader("📊 İstatistikler")
     col1, col2 = st.columns(2)
     with col1:
@@ -283,13 +266,10 @@ with st.sidebar:
 # ANA BAŞLIK
 # ============================================
 st.markdown('<h1 class="main-title">🤖 Ahmet İRİŞ Asistanı</h1>', unsafe_allow_html=True)
-st.markdown('<p class="sub-title">Senior Yazılım Mimarı | 2026</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-title">Senior Yazılım Mimarı | OpenRouter AI | 2026</p>', unsafe_allow_html=True)
 
-if st.session_state.is_dev_mode:
-    st.markdown('<span class="dev-badge" style="display:inline-block;margin-bottom:10px;">🚀 DEV MOD AKTİF</span>', unsafe_allow_html=True)
-
-# API durumu
-st.info(f"🔑 Gemini API: {API_KEY[:15]}... | Model: gemini-pro")
+# Aktif model gösterimi
+st.markdown(f'<span class="model-badge" style="background:#2563eb;">🧠 Aktif Model: {FREE_MODELS[st.session_state.selected_model]}</span>', unsafe_allow_html=True)
 
 st.divider()
 
@@ -308,7 +288,7 @@ for i, msg in enumerate(st.session_state.messages):
     else:
         st.markdown(f"""
         <div class="chat-assistant">
-            <strong>🤖 Asistan</strong>
+            <strong>🤖 {msg.get("model", "Asistan")}</strong>
             <div>{msg["content"]}</div>
             <div class="chat-time">{msg.get("time", datetime.now().strftime("%H:%M"))}</div>
         </div>
@@ -338,27 +318,42 @@ if prompt:
         search_context = search_web(prompt)
     
     system_prompt = f"""Sen Ahmet İRİŞ'in kişisel asistanısın.
-- Ahmet İRİŞ bu projenin kurucusu ve Senior Yazılım Mimarıdır
-- Projeleri: Cerberus, Arduino, Hot Wheels
-- Uzmanlık: Python, C++, Embedded Systems, AI/ML
-- Profesyonel ve teknik dil kullan
-- Kod örnekleri verirken doğru syntax kullan
 
-Konum: {user_loc}
+ÖZELLİKLERİN:
+- Ahmet İRİŞ bu projenin kurucusu, sahibi ve Senior Yazılım Mimarıdır
+- Seni o tasarladı ve geliştirdi
+- Projeleri: Cerberus, Arduino, Hot Wheels, oyun modifikasyonları
+- Uzmanlık alanları: Python, C++, Embedded Systems, AI/ML
+
+KURALLAR:
+- Profesyonel ve teknik dil kullan
+- Uygun emojiler ile cevabı zenginleştir
+- Detaylı ve açıklayıcı ol
+- Kod örnekleri verirken doğru syntax kullan
+- Kullanıcının sorusunu tam anla
+
+KONUM: {user_loc}
 {search_context}
 """
     
-    messages = [{"role": "system", "content": system_prompt}]
+    messages = [
+        {"role": "system", "content": system_prompt}
+    ]
+    
     for msg in st.session_state.messages:
         messages.append({"role": msg["role"], "content": msg["content"]})
     
-    with st.spinner("🧠 Gemini Pro düşünüyor..."):
-        answer, error = call_gemini_api(messages)
+    model_name = st.session_state.selected_model
+    model_display = FREE_MODELS[model_name]
+    
+    with st.spinner(f"🧠 {model_display} düşünüyor..."):
+        answer, error = call_openrouter_api(messages, model_name)
     
     if answer:
         st.session_state.messages.append({
             "role": "assistant",
             "content": answer,
+            "model": model_display,
             "time": datetime.now().strftime("%H:%M")
         })
         st.rerun()
@@ -374,9 +369,9 @@ st.caption("⚡ Hızlı Komutlar")
 cols = st.columns(5)
 quick = [
     ("💻 Kod", "Python'da web scraper yaz"),
-    ("📊 Analiz", "Veri analizi yöntemleri"),
-    ("🎨 Tasarım", "Logo fikirleri ver"),
-    ("🔍 Ara", "Yapay zeka haberleri"),
+    ("📊 Analiz", "Veri analizi yöntemleri neler?"),
+    ("🎨 Tasarım", "Logo tasarımı için fikir ver"),
+    ("🔍 Ara", "Son yapay zeka haberleri"),
     ("📝 Özet", "Son konuşmayı özetle")
 ]
 
@@ -395,6 +390,6 @@ for col, (label, action) in zip(cols, quick):
 # ============================================
 st.markdown("""
 <div class="footer">
-    🤖 Ahmet İRİŞ Asistanı v2.0 | Google Gemini Pro | © 2026
+    🤖 Ahmet İRİŞ Asistanı v3.0 | OpenRouter AI | En İyi Ücretsiz Modeller | © 2026
 </div>
 """, unsafe_allow_html=True)
