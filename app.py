@@ -9,6 +9,12 @@ from duckduckgo_search import DDGS
 from gtts import gTTS
 
 # ============================================
+# API ANAHTARI - DOĞRUDAN GİRİLDİ
+# ============================================
+API_KEY = "AQ.Ab8RN6Kx-XrAMbP26NxeBiBulwHHe6u2UNXCT5GORD01IZWsTw"
+API_URL = "https://router.flatkey.ai/v1/chat/completions"
+
+# ============================================
 # SAYFA AYARLARI
 # ============================================
 st.set_page_config(
@@ -177,6 +183,35 @@ def text_to_speech(text):
     except:
         return False
 
+def call_api(messages, model="gpt-4o-mini", temperature=0.7):
+    """API'yi çağır - Flatkey.ai"""
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": 2000
+    }
+    
+    try:
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+        
+        if response.status_code == 200:
+            return response.json()['choices'][0]['message']['content']
+        else:
+            return None, f"API Hatası: {response.status_code} - {response.text[:200]}"
+            
+    except requests.exceptions.Timeout:
+        return None, "Bağlantı zaman aşımı! Lütfen tekrar deneyin."
+    except requests.exceptions.ConnectionError:
+        return None, "Bağlantı hatası! İnternet bağlantınızı kontrol edin."
+    except Exception as e:
+        return None, f"Beklenmeyen hata: {str(e)}"
+
 # ============================================
 # SİDEBAR
 # ============================================
@@ -242,6 +277,9 @@ st.markdown('<p class="sub-title">Senior Yazılım Mimarı | 2026</p>', unsafe_a
 # Dev mod göstergesi
 if st.session_state.is_dev_mode:
     st.markdown('<span class="dev-badge" style="display:inline-block;margin-bottom:10px;">🚀 DEV MOD AKTİF - GPT-4O KULLANILIYOR</span>', unsafe_allow_html=True)
+
+# API Durumu
+st.info(f"🔑 API Anahtarı: {API_KEY[:15]}... (Flatkey.ai)")
 
 st.divider()
 
@@ -336,56 +374,25 @@ if prompt:
 {search_context}
 """
     
+    # Mesaj geçmişini hazırla
+    messages = [{"role": "system", "content": system_prompt}]
+    for msg in st.session_state.messages[:-1]:
+        messages.append({"role": msg["role"], "content": msg["content"]})
+    messages.append({"role": "user", "content": prompt})
+    
     # API çağrısı
-    try:
-        api_key = st.secrets.get("GEMINI_API_KEY", "")
-        if not api_key:
-            st.error("❌ API anahtarı bulunamadı! Lütfen .streamlit/secrets.toml dosyasını yapılandırın.")
-            st.stop()
-        
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        # Mesaj geçmişini hazırla
-        messages = [{"role": "system", "content": system_prompt}]
-        for msg in st.session_state.messages[:-1]:  # Son mesaj hariç
-            messages.append({"role": msg["role"], "content": msg["content"]})
-        messages.append({"role": "user", "content": prompt})
-        
-        payload = {
-            "model": model,
-            "messages": messages,
-            "temperature": 0.3 if not st.session_state.is_dev_mode else 0.7,
-            "max_tokens": 2000
-        }
-        
-        with st.spinner(f"🧠 {model} düşünüyor..."):
-            response = requests.post(
-                "https://router.flatkey.ai/v1/chat/completions",
-                headers=headers,
-                json=payload,
-                timeout=60
-            )
-        
-        if response.status_code == 200:
-            answer = response.json()['choices'][0]['message']['content']
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": answer,
-                "time": datetime.now().strftime("%H:%M")
-            })
-            st.rerun()
-        else:
-            st.error(f"⚠️ API Hatası: {response.status_code} - {response.text[:200]}")
-            
-    except requests.exceptions.Timeout:
-        st.error("❌ Bağlantı zaman aşımı! Lütfen tekrar deneyin.")
-    except requests.exceptions.ConnectionError:
-        st.error("❌ Bağlantı hatası! İnternet bağlantınızı kontrol edin.")
-    except Exception as e:
-        st.error(f"❌ Beklenmeyen hata: {str(e)}")
+    with st.spinner(f"🧠 {model} düşünüyor..."):
+        answer, error = call_api(messages, model)
+    
+    if answer:
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": answer,
+            "time": datetime.now().strftime("%H:%M")
+        })
+        st.rerun()
+    else:
+        st.error(f"❌ {error}")
 
 # ============================================
 # HIZLI KOMUTLAR
@@ -405,7 +412,6 @@ quick_commands = [
 for col, (label, action) in zip(cols, quick_commands):
     with col:
         if st.button(label, use_container_width=True):
-            # Hızlı komutu çalıştır
             st.session_state.messages.append({
                 "role": "user",
                 "content": action,
