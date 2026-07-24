@@ -12,7 +12,22 @@ OPENROUTER_API_KEY = "sk-or-v1-8ceb4e6a0d4d4b2da28f76348475a0ca54fc54268f23b5e06
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = "openai/gpt-4o-mini"
 
-# --- YARDIMCI FONKSİYONLAR ---
+# ============================================
+# YASAKLI KELİMELER (İLLEGAL İSTEKLER)
+# ============================================
+FORBIDDEN_WORDS = [
+    "şifre kır", "şifre kırma", "hack", "hacking", "korsan", "korsan yazılım",
+    "crack", "cracking", "exploit", "sömürü", "zararlı yazılım", "malware",
+    "virüs", "virus", "trojan", "truva", "keylogger", "klavye dinleme",
+    "ddos", "saldırı", "attack", "phishing", "oltalama", "kimlik avı",
+    "yasa dışı", "illegal", "uyuşturucu", "drugs", "terör", "terrorism",
+    "çocuk istismarı", "child abuse", "şiddet", "violence", "intihar", "suicide",
+    "kumar", "gambling", "dolandırıcılık", "fraud", "sahtekarlık"
+]
+
+# ============================================
+# YARDIMCI FONKSİYONLAR
+# ============================================
 def get_user_location():
     try:
         res = requests.get('https://ipinfo.io/', timeout=2)
@@ -20,6 +35,14 @@ def get_user_location():
         return f"{data.get('city', 'Isparta')}, {data.get('region', 'Türkiye')}"
     except:
         return "Isparta, Türkiye"
+
+def is_forbidden(text):
+    """Metin yasaklı kelime içeriyor mu kontrol et"""
+    text_lower = text.lower()
+    for word in FORBIDDEN_WORDS:
+        if word in text_lower:
+            return True
+    return False
 
 # --- SAYFA AYARLARI ---
 st.set_page_config(
@@ -29,7 +52,7 @@ st.set_page_config(
 )
 
 # ============================================
-# CSS - KOD RENKLİ, METİN BEYAZ
+# CSS - KOD RENKLİ, KOPYALAMA BUTONU DÜZELTİLDİ
 # ============================================
 st.markdown("""
 <style>
@@ -62,6 +85,7 @@ st.markdown("""
         font-weight: 600;
     }
     .badge-success { background: #059669; }
+    .badge-danger { background: #dc2626; }
     
     .sidebar-header {
         background: linear-gradient(135deg, #2563eb, #7c3aed);
@@ -86,7 +110,7 @@ st.markdown("""
         word-wrap: break-word;
     }
     
-    /* ASİSTAN MESAJI - BEYAZ METİN */
+    /* ASİSTAN MESAJI */
     .chat-assistant {
         background: rgba(255,255,255,0.06);
         border: 1px solid rgba(255,255,255,0.08);
@@ -115,7 +139,33 @@ st.markdown("""
         border: 1px solid rgba(255,255,255,0.05) !important;
     }
     
-    /* Python anahtar kelimeleri */
+    /* KOPYALAMA BUTONU - GÖRÜNÜR */
+    .stCodeBlock {
+        background: #0f172a !important;
+        border-radius: 8px !important;
+        padding: 12px !important;
+    }
+    
+    .stCodeBlock button {
+        background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 6px 14px !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        cursor: pointer !important;
+        transition: all 0.3s !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
+    .stCodeBlock button:hover {
+        transform: scale(1.05) !important;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important;
+    }
+    
+    /* Python renkleri */
     .chat-assistant .hljs-keyword { color: #f472b6 !important; }
     .chat-assistant .hljs-string { color: #34d399 !important; }
     .chat-assistant .hljs-comment { color: #94a3b8 !important; font-style: italic !important; }
@@ -235,6 +285,7 @@ st.markdown("""
 <div class="sub-title">
     <span class="badge">Web Tabanlı</span>
     <span class="badge badge-success">GPT-4o-mini</span>
+    <span class="badge badge-danger">🔒 Güvenli</span>
     <span style="color:#94a3b8;margin:0 8px;">|</span>
     <span style="color:#94a3b8;">2026</span>
 </div>
@@ -287,6 +338,13 @@ else:
 prompt = st.chat_input("Mesajını yaz...")
 
 if prompt:
+    # ============================================
+    # İLLEGAL İSTEK KONTROLÜ
+    # ============================================
+    if is_forbidden(prompt):
+        st.error("🚫 **YASAK İSTEK!** Bu tür içerikler desteklenmemektedir.")
+        st.stop()
+    
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.rerun()
 
@@ -302,6 +360,13 @@ if st.session_state.messages:
                 user_loc = get_user_location()
                 prompt_text = last_msg.get("content", "")
                 
+                # ============================================
+                # TEKRAR KONTROL (API çağrısı öncesi)
+                # ============================================
+                if is_forbidden(prompt_text):
+                    st.error("🚫 **YASAK İSTEK!** Bu tür içerikler desteklenmemektedir.")
+                    st.stop()
+                
                 # Web araması
                 search_context = ""
                 try:
@@ -315,10 +380,17 @@ if st.session_state.messages:
                 except:
                     pass
                 
-                # Sistem promptu
+                # Sistem promptu - GÜVENLİK EKLENDİ
                 system_prompt = f"""Sen Ahmet İRİŞ'in asistanısın. 
 Ahmet İRİŞ projenin kurucusu ve Senior Yazılım Mimarıdır.
 Cevaplarında emoji kullan, profesyonel ve teknik ol.
+
+⚠️ ÖNEMLİ GÜVENLİK KURALLARI:
+1. ASLA yasa dışı, zararlı veya etik olmayan konularda yardım etme!
+2. ASLA şifre kırma, hackleme, virüs yapımı gibi konularda bilgi verme!
+3. ASLA uyuşturucu, şiddet, terör gibi konularda tavsiye verme!
+4. Kullanıcı bu tür sorular sorarsa NAZİKÇE reddet ve güvenli konulara yönlendir.
+
 {search_context}"""
                 
                 # Mesajları hazırla
@@ -368,6 +440,6 @@ Cevaplarında emoji kullan, profesyonel ve teknik ol.
 # ============================================
 st.markdown("""
 <div class="footer">
-    🤖 Ahmet İRİŞ Asistanı | GPT-4o-mini | © 2026
+    🤖 Ahmet İRİŞ Asistanı | GPT-4o-mini | 🔒 Güvenli | © 2026
 </div>
 """, unsafe_allow_html=True)
