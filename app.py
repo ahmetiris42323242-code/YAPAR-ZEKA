@@ -137,7 +137,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- OTURUM BAŞLAT ---
+# ============================================
+# OTURUM - GÜVENLİ BAŞLAT
+# ============================================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -153,7 +155,6 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # Görsel Atölyesi
     st.subheader("🎨 Görsel Atölyesi")
     with st.form("gorsel_form", clear_on_submit=True):
         g_prompt = st.text_input("Ne çizelim?", placeholder="Uzay gemisi...")
@@ -166,11 +167,13 @@ with st.sidebar:
     
     st.divider()
     
-    # İstatistikler
     st.subheader("📊 İstatistikler")
     col1, col2 = st.columns(2)
     with col1:
-        user_msgs = len([m for m in st.session_state.messages if m.get("role") == "user"])
+        try:
+            user_msgs = len([m for m in st.session_state.messages if m and m.get("role") == "user"])
+        except:
+            user_msgs = 0
         st.markdown(f"""
         <div class="stat-card">
             <div class="stat-number">{user_msgs}</div>
@@ -178,7 +181,10 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
     with col2:
-        assistant_msgs = len([m for m in st.session_state.messages if m.get("role") == "assistant"])
+        try:
+            assistant_msgs = len([m for m in st.session_state.messages if m and m.get("role") == "assistant"])
+        except:
+            assistant_msgs = 0
         st.markdown(f"""
         <div class="stat-card">
             <div class="stat-number">{assistant_msgs}</div>
@@ -215,91 +221,112 @@ if not st.session_state.messages:
     """, unsafe_allow_html=True)
 else:
     for i, msg in enumerate(st.session_state.messages):
-        if msg.get("role") == "user":
+        if msg and msg.get("role") == "user":
             with st.chat_message("user"):
-                st.markdown(msg.get("content", ""))
-        else:
+                st.markdown(str(msg.get("content", "")))
+        elif msg and msg.get("role") == "assistant":
             with st.chat_message("assistant"):
-                st.markdown(msg.get("content", ""))
-                if st.button("🔊", key=f"audio_{i}", help="Sesli dinle"):
-                    try:
-                        tts = gTTS(text=msg.get("content", "")[:500], lang='tr', slow=False)
-                        tts.save("cevap.mp3")
-                        st.audio("cevap.mp3")
-                    except:
-                        st.error("❌ Ses oluşturulamadı")
+                st.markdown(str(msg.get("content", "")))
+                col1, col2 = st.columns([1, 10])
+                with col1:
+                    if st.button("🔊", key=f"audio_{i}", help="Sesli dinle"):
+                        try:
+                            tts = gTTS(text=str(msg.get("content", ""))[:500], lang='tr', slow=False)
+                            tts.save("cevap.mp3")
+                            st.audio("cevap.mp3")
+                        except:
+                            st.error("❌ Ses oluşturulamadı")
 
 # ============================================
 # GIRDI
 # ============================================
 prompt = st.chat_input("Mesajını yaz...")
 
-if prompt:
-    # Kullanıcı mesajını ekle
-    st.session_state.messages.append({"role": "user", "content": prompt})
+if prompt and prompt.strip():
+    st.session_state.messages.append({"role": "user", "content": prompt.strip()})
     st.rerun()
 
 # ============================================
-# API İSLEME
+# API İSLEME - GÜVENLİ
 # ============================================
-if st.session_state.messages and st.session_state.messages[-1].get("role") == "user":
-    with st.spinner("🧠 Düşünüyor..."):
-        try:
-            user_loc = get_user_location()
-            
-            # Web araması
-            search_context = ""
+if st.session_state.messages:
+    last_msg = st.session_state.messages[-1]
+    if last_msg and last_msg.get("role") == "user":
+        with st.spinner("🧠 Düşünüyor..."):
             try:
-                with DDGS() as ddgs:
-                    results = list(ddgs.text(prompt, max_results=2))
-                    if results:
-                        search_context = f"\n🔍 Güncel Bilgi ({user_loc}):\n"
-                        for r in results[:2]:
-                            search_context += f"• {r.get('title', '')[:100]}\n"
-            except:
-                pass
-            
-            # Sistem promptu
-            system_prompt = f"""Sen Ahmet İRİŞ'in asistanısın. 
+                user_loc = get_user_location()
+                
+                # Web araması
+                search_context = ""
+                try:
+                    with DDGS() as ddgs:
+                        results = list(ddgs.text(prompt, max_results=2))
+                        if results:
+                            search_context = f"\n🔍 Güncel Bilgi ({user_loc}):\n"
+                            for r in results[:2]:
+                                if r and r.get("title"):
+                                    search_context += f"• {str(r.get('title', ''))[:100]}\n"
+                except:
+                    pass
+                
+                # Sistem promptu
+                system_prompt = f"""Sen Ahmet İRİŞ'in asistanısın. 
 Ahmet İRİŞ projenin kurucusu ve Senior Yazılım Mimarıdır.
 Cevaplarında emoji kullan, profesyonel ve teknik ol.
 {search_context}"""
-            
-            # Mesajları hazırla
-            messages = [{"role": "system", "content": system_prompt.strip()}]
-            
-            for msg in st.session_state.messages[:-1]:
-                content = msg.get("content", "")
-                if content and content.strip():
-                    messages.append({"role": msg["role"], "content": content.strip()})
-            
-            messages.append({"role": "user", "content": prompt.strip()})
-            
-            # API çağrısı
-            headers = {
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://localhost:8501"
-            }
-            
-            payload = {
-                "model": MODEL,
-                "messages": messages,
-                "temperature": 0.3,
-                "max_tokens": 2000
-            }
-            
-            response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=60)
-            
-            if response.status_code == 200:
-                answer = response.json()["choices"][0]["message"]["content"]
-                st.session_state.messages.append({"role": "assistant", "content": answer})
-                st.rerun()
-            else:
-                st.error(f"⚠️ API Hatası: {response.status_code}")
                 
-        except Exception as e:
-            st.error(f"❌ Hata: {str(e)}")
+                # Mesajları hazırla - GÜVENLİ
+                messages = [{"role": "system", "content": system_prompt.strip()}]
+                
+                for msg in st.session_state.messages[:-1]:
+                    if msg and msg.get("content"):
+                        content = str(msg.get("content", "")).strip()
+                        if content:
+                            messages.append({
+                                "role": str(msg.get("role", "user")),
+                                "content": content
+                            })
+                
+                # Son mesajı ekle
+                if prompt and prompt.strip():
+                    messages.append({"role": "user", "content": prompt.strip()})
+                else:
+                    st.error("❌ Mesaj boş olamaz!")
+                    st.stop()
+                
+                # API çağrısı
+                headers = {
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://localhost:8501"
+                }
+                
+                payload = {
+                    "model": MODEL,
+                    "messages": messages,
+                    "temperature": 0.3,
+                    "max_tokens": 2000
+                }
+                
+                response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=60)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if data and data.get("choices") and data["choices"][0].get("message"):
+                        answer = data["choices"][0]["message"]["content"]
+                        if answer:
+                            st.session_state.messages.append({"role": "assistant", "content": answer})
+                            st.rerun()
+                        else:
+                            st.error("❌ Boş cevap alındı!")
+                    else:
+                        st.error("❌ Geçersiz API yanıtı!")
+                else:
+                    st.error(f"⚠️ API Hatası: {response.status_code}")
+                    st.code(str(response.text)[:500])
+                    
+            except Exception as e:
+                st.error(f"❌ Hata: {str(e)}")
 
 # ============================================
 # FOOTER
