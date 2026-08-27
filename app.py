@@ -463,10 +463,6 @@ if st.session_state.messages:
 - Yaratıcı fikirler üret
 - Kullanıcıya özel çözümler sun
 
-⚠️ **GÜVENLİK:**
-- ASLA yasa dışı konularda yardım etme
-- ASLA zararlı içerik üretme
-- Şüpheli durumlarda kibarca reddet
 
 {search_context}
 
